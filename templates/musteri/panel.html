@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block baslik %}Müşteri Paneli – Güzellik Merkezi{% endblock %}
+
+{% block icerik %}
+<!--
+  templates/musteri/panel.html  –  Müşteri Ana Paneli
+  ====================================================
+  Müşterinin hoş geldin ekranı:
+    - Kişisel puan göstergesi
+    - Aktif/bekleyen randevular
+    - Hızlı aksiyon butonları
+-->
+
+<!-- Hoş Geldin Banner -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card bg-danger text-white">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-hand-wave"></i>
+                        Hoş Geldiniz, {{ session.kullanici_adi }}!
+                    </h4>
+                    <p class="mb-0 opacity-75">Güzellik Merkezi Randevu Sistemi</p>
+                </div>
+                <!-- Müşteri Puan Göstergesi -->
+                <div class="text-center">
+                    <div class="display-6 fw-bold">{{ musteri['puan'] }}</div>
+                    <small><i class="bi bi-star-fill"></i> Puan</small>
+                    <br>
+                    <!--
+                      Puan rengi: 80+ yeşil, 50-79 sarı, 0-49 kırmızı
+                      Jinja2'de if-elif-else ile koşullu sınıf seçiyoruz
+                    -->
+                    {% if musteri['puan'] >= 80 %}
+                        <span class="badge bg-success">Güvenilir Müşteri ⭐</span>
+                    {% elif musteri['puan'] >= 50 %}
+                        <span class="badge bg-warning text-dark">Ortalama</span>
+                    {% else %}
+                        <span class="badge bg-light text-danger">Düşük Puan</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-calendar-check text-success" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ aktif_randevular | length }}</h4>
+                <p class="text-muted mb-0">Aktif Randevu</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-check-circle text-primary" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ gecmis_sayi }}</h4>
+                <p class="text-muted mb-0">Tamamlanan</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-x-circle text-warning" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ musteri['gelmeme_sayisi'] }}</h4>
+                <p class="text-muted mb-0">Gelmeme Sayısı</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hızlı Aksiyon Butonu -->
+<div class="row mb-4">
+    <div class="col">
+        <a href="{{ url_for('musteri.randevu_al') }}" class="btn btn-danger btn-lg me-2">
+            <i class="bi bi-calendar-plus"></i> Yeni Randevu Al
+        </a>
+        <a href="{{ url_for('musteri.randevularim') }}" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-list-ul"></i> Tüm Randevularım
+        </a>
+    </div>
+</div>
+
+<!-- Aktif Randevular Listesi -->
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-calendar3 text-danger"></i>
+            Yaklaşan Randevularım
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if aktif_randevular %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Saat</th>
+                            <th>İşlem</th>
+                            <th>Personel</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {# Jinja2 döngüsü: liste elemanlarını tek tek işler #}
+                        {% for randevu in aktif_randevular %}
+                        <tr>
+                            <td>
+                                <i class="bi bi-calendar text-danger"></i>
+                                {{ randevu['tarih'] }}
+                            </td>
+                            <td>
+                                <i class="bi bi-clock"></i>
+                                {{ randevu['saat'] }}
+                            </td>
+                            <td>{{ randevu['islem'] }}</td>
+                            <td>{{ randevu['personel_adi'] }}</td>
+                            <td>
+                                {# Duruma göre farklı renk badge #}
+                                {% if randevu['durum'] == 'beklemede' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split"></i> Beklemede
+                                    </span>
+                                {% elif randevu['durum'] == 'onaylandi' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Onaylandı
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- Randevu yoksa boş durum göster -->
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+                <p class="mt-2">Henüz aktif randevunuz bulunmuyor.</p>
+                <a href="{{ url_for('musteri.randevu_al') }}" class="btn btn-danger">
+                    <i class="bi bi-plus-circle"></i> İlk Randevumu Al
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

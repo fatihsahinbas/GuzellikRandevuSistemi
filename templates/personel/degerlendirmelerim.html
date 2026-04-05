@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block baslik %}Değerlendirmelerim – Güzellik Merkezi{% endblock %}
+
+{% block icerik %}
+<!--
+  templates/personel/degerlendirmelerim.html
+  ===========================================
+  DFD 7.0 – Personel Değerlendirme İşlemi
+  Müşterilerden gelen değerlendirmeleri ve ortalama puanları gösterir.
+-->
+
+<h4 class="mb-4">
+    <i class="bi bi-star-fill text-warning"></i>
+    Değerlendirmelerim
+</h4>
+
+<!-- Ortalama Puan Özeti -->
+{% if ortalama['toplam_degerlendirme'] > 0 %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-warning">
+                    {{ "%.1f"|format(ortalama['ort_hizmet'] or 0) }}
+                </div>
+                <p class="text-muted mb-0">Hizmet Kalitesi</p>
+                <div>★★★★★</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-info">
+                    {{ "%.1f"|format(ortalama['ort_tutum'] or 0) }}
+                </div>
+                <p class="text-muted mb-0">Tutum</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-success">
+                    {{ "%.1f"|format(ortalama['ort_sure'] or 0) }}
+                </div>
+                <p class="text-muted mb-0">İşlem Süresi</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-secondary">
+            <div class="card-body">
+                <div class="display-5 fw-bold">
+                    {{ ortalama['toplam_degerlendirme'] }}
+                </div>
+                <p class="text-muted mb-0">Toplam Değerlendirme</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Değerlendirme Listesi -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Müşteri Yorumları</h5>
+    </div>
+    <div class="card-body">
+        {% if degerlendirmeler %}
+            {% for d in degerlendirmeler %}
+            <div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>{{ d['musteri_adi'] }}</strong>
+                        <span class="text-muted small ms-2">
+                            {{ d['tarih'] }} – {{ d['islem'] }}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ d['olusturma_tarihi'][:10] }}</small>
+                </div>
+                <div class="mt-2">
+                    {# Yıldız gösterimi: puan kadar sarı, geri kalanı gri #}
+                    <span class="me-3">
+                        Hizmet:
+                        {% for i in range(d['hizmet_puani']) %}★{% endfor %}
+                        {% for i in range(5 - d['hizmet_puani']) %}☆{% endfor %}
+                    </span>
+                    <span class="me-3">
+                        Tutum:
+                        {% for i in range(d['tutum_puani']) %}★{% endfor %}
+                        {% for i in range(5 - d['tutum_puani']) %}☆{% endfor %}
+                    </span>
+                    <span>
+                        Süre:
+                        {% for i in range(d['sure_puani']) %}★{% endfor %}
+                        {% for i in range(5 - d['sure_puani']) %}☆{% endfor %}
+                    </span>
+                </div>
+                {% if d['yorum'] %}
+                <div class="mt-2 text-muted fst-italic">
+                    "{{ d['yorum'] }}"
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-chat-square" style="font-size: 3rem;"></i>
+                <p class="mt-2">Henüz değerlendirme yapılmamış.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

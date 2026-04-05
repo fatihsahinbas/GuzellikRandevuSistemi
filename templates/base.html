@@ -1,0 +1,292 @@
+<!doctype html>
+<!--
+  templates/base.html  –  Ana Şablon (Base Template)
+  =====================================================
+  Tüm sayfalar bu şablonu genişletir (extends).
+
+  ANAHTAR KAVRAM – Jinja2 Template Kalıtımı:
+      Python'daki sınıf kalıtımı gibi çalışır.
+      base.html → ortak yapı (navbar, footer, CSS)
+      Diğer HTML'ler → sadece değişen kısımları yazar
+
+  {% block içerik %}{% endblock %}
+      → Alt şablonların doldurduğu "delik"ler.
+      Tıpkı bir şablonun boş kutucukları gibi.
+-->
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block baslik %}Güzellik Merkezi Randevu Sistemi{% endblock %}
+    </title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ================================================
+           GENEL STİL AYARLARI
+           ================================================ */
+      :root {
+        --mp-kirmizi: #dc3545;
+        --mp-koyu: #212529;
+        --mp-acik: #f8f9fa;
+      }
+
+      body {
+        background-color: #f5f6fa;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      /* Navbar stilleri */
+      .navbar-brand {
+        font-weight: 700;
+        font-size: 1.4rem;
+        color: var(--mp-kirmizi) !important;
+      }
+
+      /* Kart gölge efekti */
+      .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Durum rozet renkleri */
+      .badge-beklemede {
+        background-color: #ffc107;
+        color: #000;
+      }
+      .badge-onaylandi {
+        background-color: #28a745;
+      }
+      .badge-reddedildi {
+        background-color: #dc3545;
+      }
+      .badge-tamamlandi {
+        background-color: #17a2b8;
+      }
+      .badge-gelmedi {
+        background-color: #6c757d;
+      }
+
+      /* Sidebar için aktif link */
+      .sidebar .nav-link.active {
+        background-color: var(--mp-kirmizi);
+        color: white !important;
+        border-radius: 8px;
+      }
+
+      /* Puan renkleri */
+      .puan-yuksek {
+        color: #28a745;
+        font-weight: bold;
+      }
+      .puan-orta {
+        color: #ffc107;
+        font-weight: bold;
+      }
+      .puan-dusuk {
+        color: #dc3545;
+        font-weight: bold;
+      }
+
+      /* Footer */
+      footer {
+        background: var(--mp-koyu);
+        color: #adb5bd;
+        padding: 15px 0;
+        margin-top: 40px;
+      }
+    </style>
+
+    {% block ekstra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- ================================================
+     NAVİGASYON ÇUBUĞU
+     ================================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div class="container">
+        <!-- Logo / Marka -->
+        <a class="navbar-brand" href="/">
+          <i class="bi bi-hospital-fill text-danger"></i>
+          Güzellik Merkezi
+        </a>
+
+        <!-- Mobil menü butonu -->
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navMenu"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navMenu">
+          <ul class="navbar-nav ms-auto">
+            {# Jinja2 koşullu blok: session'a göre menü değişir #} {% if
+            session.kullanici_rol == 'musteri' %}
+            <!-- MÜŞTERİ MENÜSÜ -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('musteri.panel') }}">
+                <i class="bi bi-house"></i> Panelim
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('musteri.randevu_al') }}">
+                <i class="bi bi-calendar-plus"></i> Randevu Al
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('musteri.randevularim') }}">
+                <i class="bi bi-calendar-check"></i> Randevularım
+              </a>
+            </li>
+            <li class="nav-item">
+              <span class="nav-link text-warning">
+                <i class="bi bi-person-circle"></i>
+                {{ session.kullanici_adi }}
+              </span>
+            </li>
+
+            {% elif session.kullanici_rol == 'personel' %}
+            <!-- PERSONEL MENÜSÜ -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('personel.panel') }}">
+                <i class="bi bi-grid"></i> Panel
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('personel.randevular') }}">
+                <i class="bi bi-calendar3"></i> Randevular
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="{{ url_for('personel.degerlendirmelerim') }}"
+              >
+                <i class="bi bi-star"></i> Değerlendirmeler
+              </a>
+            </li>
+            <li class="nav-item">
+              <span class="nav-link text-warning">
+                <i class="bi bi-person-badge"></i>
+                {{ session.kullanici_adi }}
+              </span>
+            </li>
+
+            {% elif session.kullanici_rol == 'admin' %}
+            <!-- ADMİN MENÜSÜ -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.panel') }}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.musteriler') }}">
+                <i class="bi bi-people"></i> Müşteriler
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.personeller') }}">
+                <i class="bi bi-person-badge"></i> Personeller
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.tum_randevular') }}">
+                <i class="bi bi-calendar3"></i> Randevular
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.istatistikler') }}">
+                <i class="bi bi-bar-chart"></i> İstatistikler
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.hizmetler') }}">
+                <i class="bi bi-scissors"></i> Hizmetler
+              </a>
+            </li>
+            <li class="nav-item">
+              <span class="nav-link text-danger">
+                <i class="bi bi-shield-fill"></i> Admin
+              </span>
+            </li>
+            {% endif %}
+
+            <!-- Giriş yapılmışsa çıkış butonu -->
+            {% if session.kullanici_id %}
+            <li class="nav-item">
+              <a
+                class="nav-link text-danger"
+                href="{{ url_for('auth.cikis') }}"
+              >
+                <i class="bi bi-box-arrow-right"></i> Çıkış
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ================================================
+     ANA İÇERİK ALANI
+     ================================================ -->
+    <main class="container mt-4 mb-5">
+      <!-- Flash mesajları (success, danger, warning, info) -->
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for kategori, mesaj in messages %}
+      <!--
+                  alert-dismissible → kullanıcı kapatabilir
+                  fade show         → yumuşak kapanma animasyonu
+                -->
+      <div
+        class="alert alert-{{ kategori }} alert-dismissible fade show"
+        role="alert"
+      >
+        <i class="bi bi-info-circle me-2"></i>
+        {{ mesaj }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <!-- Alt şablonların içeriği buraya gelir -->
+      {% block icerik %}{% endblock %}
+    </main>
+
+    <!-- ================================================
+     FOOTER
+     ================================================ -->
+    <footer class="text-center">
+      <div class="container">
+        <p class="mb-0">
+          <i class="bi bi-hospital-fill text-danger"></i>
+          Güzellik Merkezi Randevu Sistemi &copy; 2024 |
+          <small>Projesi – Flask + SQLite</small>
+        </p>
+      </div>
+    </footer>
+
+    <!-- Bootstrap 5 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% block ekstra_js %}{% endblock %}
+  </body>
+</html>

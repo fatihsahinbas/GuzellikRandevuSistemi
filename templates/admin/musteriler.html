@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block baslik %}Müşteri Yönetimi – Admin{% endblock %}
+{% block icerik %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-people text-danger"></i> Müşteri Yönetimi</h4>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Ad Soyad</th>
+                        <th>Telefon</th>
+                        <th>E-posta</th>
+                        <th>Puan</th>
+                        <th>Gelmeme</th>
+                        <th>Toplam Randevu</th>
+                        <th>Durum</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in musteriler %}
+                    <tr class="{{ 'table-danger' if not m['aktif'] else '' }}">
+                        <td>{{ m['id'] }}</td>
+                        <td><strong>{{ m['ad_soyad'] }}</strong></td>
+                        <td>{{ m['telefon'] }}</td>
+                        <td>{{ m['email'] or '—' }}</td>
+                        <td>
+                            {% if m['puan'] >= 80 %}
+                                <span class="text-success fw-bold">{{ m['puan'] }} ⭐</span>
+                            {% elif m['puan'] >= 50 %}
+                                <span class="text-warning fw-bold">{{ m['puan'] }}</span>
+                            {% else %}
+                                <span class="text-danger fw-bold">{{ m['puan'] }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m['gelmeme_sayisi'] > 2 %}
+                                <span class="badge bg-danger">{{ m['gelmeme_sayisi'] }}</span>
+                            {% else %}
+                                {{ m['gelmeme_sayisi'] }}
+                            {% endif %}
+                        </td>
+                        <td>{{ m['toplam_randevu'] or 0 }}</td>
+                        <td>
+                            {% if m['aktif'] %}
+                                <span class="badge bg-success">Aktif</span>
+                            {% else %}
+                                <span class="badge bg-danger">Pasif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('admin.musteri_durum_degistir', musteri_id=m['id']) }}">
+                                <button type="submit" class="btn btn-sm {{ 'btn-warning' if m['aktif'] else 'btn-success' }}"
+                                        onclick="return confirm('Müşteri durumu değiştirilecek. Emin misiniz?')">
+                                    {% if m['aktif'] %}
+                                        <i class="bi bi-lock"></i> Pasife Al
+                                    {% else %}
+                                        <i class="bi bi-unlock"></i> Aktifleştir
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
