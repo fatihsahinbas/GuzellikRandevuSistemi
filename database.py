@@ -155,6 +155,18 @@ def init_db():
             aktif   INTEGER DEFAULT 1       -- 0=pasif, 1=aktif
         )
     ''')
+    
+    # TABLO: sifre_sifirlama tokenları
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS sifre_sifirlama (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            musteri_id  INTEGER NOT NULL,
+            token       TEXT NOT NULL UNIQUE,
+            son_kullanim TEXT NOT NULL,  -- Token geçerlilik süresi
+            kullanildi  INTEGER DEFAULT 0,
+            FOREIGN KEY (musteri_id) REFERENCES musteriler(id)
+        )
+    ''')
 
     db.commit()
 

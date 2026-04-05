@@ -206,6 +206,60 @@ def personel_login_page():
     return render_template('auth/personel_login.html')
 
 
+@auth_bp.route('/sifremi-unuttum', methods=['GET', 'POST'])
+def sifremi_unuttum():
+    """
+    Şifre sıfırlama sayfası.
+
+    Müşteri telefon numarasını girer ve yeni şifresini belirler.
+    Token veya e-posta gerekmez, telefon = kimlik doğrulama.
+    """
+    if request.method == 'POST':
+        telefon     = request.form.get('telefon', '').strip()
+        yeni_sifre  = request.form.get('yeni_sifre', '').strip()
+        yeni_sifre2 = request.form.get('yeni_sifre2', '').strip()
+
+        # Telefon kontrolü
+        from utils.validators import telefon_gecerli_mi, sifre_gecerli_mi
+        gecerli, mesaj = telefon_gecerli_mi(telefon)
+        if not gecerli:
+            flash(mesaj, 'danger')
+            return render_template('auth/sifremi_unuttum.html')
+
+        # Şifre kontrolü
+        gecerli, mesaj = sifre_gecerli_mi(yeni_sifre)
+        if not gecerli:
+            flash(mesaj, 'danger')
+            return render_template('auth/sifremi_unuttum.html')
+
+        # Şifre eşleşiyor mu?
+        if yeni_sifre != yeni_sifre2:
+            flash('Şifreler birbiriyle eşleşmiyor.', 'danger')
+            return render_template('auth/sifremi_unuttum.html')
+
+        # Telefon kayıtlı mı?
+        db = get_db()
+        musteri = db.execute(
+            'SELECT * FROM musteriler WHERE telefon = ? AND aktif = 1',
+            (telefon,)
+        ).fetchone()
+
+        if not musteri:
+            flash('Bu telefon numarasına kayıtlı aktif hesap bulunamadı.', 'danger')
+            return render_template('auth/sifremi_unuttum.html')
+
+        # Yeni şifreyi kaydet
+        from utils.auth_helper import hash_sifre
+        db.execute(
+            'UPDATE musteriler SET sifre_hash = ? WHERE id = ?',
+            (hash_sifre(yeni_sifre), musteri['id'])
+        )
+        db.commit()
+
+        flash('Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.', 'success')
+        return redirect(url_for('auth.login_page'))
+
+    return render_template('auth/sifremi_unuttum.html')
 # ==============================================================
 # ÇIKIŞ
 # ==============================================================

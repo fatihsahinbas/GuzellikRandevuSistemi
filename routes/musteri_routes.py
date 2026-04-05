@@ -22,6 +22,7 @@ from flask import (Blueprint, render_template, request,
                    redirect, url_for, session, flash)
 from database import get_db
 from utils.auth_helper import musteri_mi, guncel_musteri
+from utils.email_helper import (email_gonder, iptal_emaili_olustur)
 from utils.validators import tarih_gecerli_mi
 
 musteri_bp = Blueprint('musteri', __name__)
@@ -296,15 +297,28 @@ def degerlendirme_yap(randevu_id):
 def randevu_iptal(randevu_id):
     """
     Beklemedeki bir randevuyu iptal eder.
-    Yalnızca 'beklemede' durumundaki randevular iptal edilebilir.
+    İptal sonrası müşteriye e-posta bildirimi gönderir.
+
+    Kurallar:
+      - Yalnızca 'beklemede' durumundaki randevular iptal edilebilir.
+      - Müşteri yalnızca kendi randevusunu iptal edebilir.
+      - E-posta adresi kayıtlıysa iptal bildirimi gönderilir.
+        Kayıtlı değilse iptal yine gerçekleşir, sadece e-posta atlanır.
     """
     db = get_db()
     musteri_id = session['kullanici_id']
 
-    randevu = db.execute(
-        'SELECT * FROM randevular WHERE id = ? AND musteri_id = ?',
-        (randevu_id, musteri_id)
-    ).fetchone()
+    # Randevuyu çek; JOIN ile müşteri ve personel bilgilerini de al
+    randevu = db.execute('''
+        SELECT r.*,
+               m.ad_soyad AS musteri_adi,
+               m.email    AS musteri_email,
+               p.ad_soyad AS personel_adi
+        FROM randevular r
+        JOIN musteriler  m ON r.musteri_id  = m.id
+        JOIN personeller p ON r.personel_id = p.id
+        WHERE r.id = ? AND r.musteri_id = ?
+    ''', (randevu_id, musteri_id)).fetchone()
 
     if not randevu:
         flash('Randevu bulunamadı.', 'danger')
@@ -314,11 +328,92 @@ def randevu_iptal(randevu_id):
         flash('Yalnızca beklemedeki randevular iptal edilebilir.', 'warning')
         return redirect(url_for('musteri.randevularim'))
 
+    # Durumu güncelle
     db.execute(
         'UPDATE randevular SET durum = "reddedildi" WHERE id = ?',
         (randevu_id,)
     )
     db.commit()
 
-    flash('Randevunuz iptal edildi.', 'info')
+    # E-posta bildirimi — müşterinin e-postası varsa gönder
+    if randevu['musteri_email']:
+        html = iptal_emaili_olustur(
+            musteri_adi=randevu['musteri_adi'],
+            tarih=randevu['tarih'],
+            saat=randevu['saat'],
+            islem=randevu['islem'],
+            personel=randevu['personel_adi']
+        )
+        email_gonder(
+            randevu['musteri_email'],
+            f'Randevu İptal Bildirimi – {randevu["tarih"]} {randevu["saat"]}',
+            html
+        )
+        # Not: E-posta başarısız olsa bile iptal işlemi geri alınmaz.
+        # Kullanıcıya hata göstermek yerine sessizce geçiyoruz,
+        # çünkü asıl işlem (iptal) zaten tamamlandı.
+
+    flash('Randevunuz iptal edildi. Bilgilendirme e-postası gönderildi.', 'info')
     return redirect(url_for('musteri.randevularim'))
+
+@musteri_bp.route('/profil', methods=['GET', 'POST'])
+@giris_gerekli
+def profil():
+    """
+    Müşterinin kendi profil bilgilerini güncellemesi.
+    Ad-Soyad, e-posta ve telefon güncellenebilir.
+    """
+    db = get_db()
+    musteri = guncel_musteri()
+
+    if request.method == 'POST':
+        ad_soyad = request.form.get('ad_soyad', '').strip()
+        telefon  = request.form.get('telefon', '').strip()
+        email    = request.form.get('email', '').strip()
+
+        # Validasyon
+        from utils.validators import ad_soyad_gecerli_mi, telefon_gecerli_mi, email_gecerli_mi
+        hatalar = []
+
+        gecerli, mesaj = ad_soyad_gecerli_mi(ad_soyad)
+        if not gecerli:
+            hatalar.append(mesaj)
+
+        gecerli, mesaj = telefon_gecerli_mi(telefon)
+        if not gecerli:
+            hatalar.append(mesaj)
+
+        gecerli, mesaj = email_gecerli_mi(email)
+        if not gecerli:
+            hatalar.append(mesaj)
+
+        if hatalar:
+            for hata in hatalar:
+                flash(hata, 'danger')
+            return render_template('musteri/profil.html', musteri=musteri)
+
+        # Telefon başkasına ait mi kontrol et
+        baska_musteri = db.execute(
+            'SELECT id FROM musteriler WHERE telefon = ? AND id != ?',
+            (telefon, session['kullanici_id'])
+        ).fetchone()
+
+        if baska_musteri:
+            flash('Bu telefon numarası başka bir hesaba kayıtlı.', 'danger')
+            return render_template('musteri/profil.html', musteri=musteri)
+
+        # Güncelle
+        db.execute('''
+            UPDATE musteriler
+            SET ad_soyad = ?, telefon = ?, email = ?
+            WHERE id = ?
+        ''', (ad_soyad, telefon, email or None, session['kullanici_id']))
+        db.commit()
+
+        # Session'daki adı da güncelle
+        session['kullanici_adi'] = ad_soyad
+
+        flash('Profil bilgileriniz güncellendi.', 'success')
+        return redirect(url_for('musteri.profil'))
+
+    return render_template('musteri/profil.html', musteri=musteri)

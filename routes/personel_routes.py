@@ -398,3 +398,52 @@ def degerlendirmelerim():
     return render_template('personel/degerlendirmelerim.html',
                            degerlendirmeler=degerlendirmeler,
                            ortalama=ortalama)
+@personel_bp.route('/sifre-degistir', methods=['GET', 'POST'])
+@personel_giris_gerekli
+def sifre_degistir():
+    """
+    Personelin kendi şifresini değiştirmesi.
+
+    Mevcut şifreyi doğrular, yeni şifreyi kaydeder.
+    Admin de bu sayfayı kullanabilir.
+    """
+    if request.method == 'POST':
+        mevcut_sifre = request.form.get('mevcut_sifre', '').strip()
+        yeni_sifre   = request.form.get('yeni_sifre', '').strip()
+        yeni_sifre2  = request.form.get('yeni_sifre2', '').strip()
+
+        db = get_db()
+        personel = db.execute(
+            'SELECT * FROM personeller WHERE id = ?',
+            (session['kullanici_id'],)
+        ).fetchone()
+
+        # Mevcut şifre doğru mu?
+        from utils.auth_helper import sifre_dogru_mu, hash_sifre
+        if not sifre_dogru_mu(mevcut_sifre, personel['sifre_hash']):
+            flash('Mevcut şifreniz hatalı.', 'danger')
+            return render_template('personel/sifre_degistir.html')
+
+        # Yeni şifre geçerli mi?
+        from utils.validators import sifre_gecerli_mi
+        gecerli, mesaj = sifre_gecerli_mi(yeni_sifre)
+        if not gecerli:
+            flash(mesaj, 'danger')
+            return render_template('personel/sifre_degistir.html')
+
+        # Şifreler eşleşiyor mu?
+        if yeni_sifre != yeni_sifre2:
+            flash('Yeni şifreler birbiriyle eşleşmiyor.', 'danger')
+            return render_template('personel/sifre_degistir.html')
+
+        # Yeni şifreyi kaydet
+        db.execute(
+            'UPDATE personeller SET sifre_hash = ? WHERE id = ?',
+            (hash_sifre(yeni_sifre), session['kullanici_id'])
+        )
+        db.commit()
+
+        flash('Şifreniz başarıyla güncellendi.', 'success')
+        return redirect(url_for('personel.panel'))
+
+    return render_template('personel/sifre_degistir.html')

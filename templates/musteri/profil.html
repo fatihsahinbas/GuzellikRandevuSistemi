@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block baslik %}Profilim – Güzellik Merkezi{% endblock %}
+{% block icerik %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-circle"></i> Profil Bilgilerim
+                </h5>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- Puan Göstergesi -->
+                <div class="text-center mb-4">
+                    <div class="display-4 fw-bold
+                        {% if musteri['puan'] >= 80 %}text-success
+                        {% elif musteri['puan'] >= 50 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ musteri['puan'] }}
+                    </div>
+                    <p class="text-muted">Güvenilirlik Puanı</p>
+                    <small class="text-muted">
+                        Gelmeme Sayısı: {{ musteri['gelmeme_sayisi'] }}
+                    </small>
+                </div>
+
+                <hr>
+
+                <form method="POST" action="{{ url_for('musteri.profil') }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-person"></i> Ad Soyad
+                        </label>
+                        <input type="text" class="form-control"
+                               name="ad_soyad"
+                               value="{{ musteri['ad_soyad'] }}"
+                               required>
+                        <div class="form-text">Yalnızca harf kullanınız</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-telephone"></i> Telefon
+                        </label>
+                        <input type="tel" class="form-control"
+                               name="telefon"
+                               value="{{ musteri['telefon'] }}"
+                               required>
+                        <div class="form-text">Giriş için kullandığınız numara</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-envelope"></i> E-posta
+                            <span class="text-muted">(isteğe bağlı)</span>
+                        </label>
+                        <input type="email" class="form-control"
+                               name="email"
+                               value="{{ musteri['email'] or '' }}"
+                               placeholder="ornek@email.com">
+                        <div class="form-text">Randevu hatırlatmaları için kullanılır</div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="bi bi-check-circle"></i> Bilgilerimi Güncelle
+                        </button>
+                    </div>
+                </form>
+
+                <hr>
+                <div class="text-center">
+                    <a href="{{ url_for('musteri.panel') }}" class="text-muted">
+                        <i class="bi bi-arrow-left"></i> Panele Dön
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
