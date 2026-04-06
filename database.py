@@ -150,9 +150,10 @@ def init_db():
     # TABLO 5: hizmetler (Admin tarafından yönetilen işlem listesi)
     db.execute('''
         CREATE TABLE IF NOT EXISTS hizmetler (
-            id      INTEGER PRIMARY KEY AUTOINCREMENT,
-            ad      TEXT NOT NULL UNIQUE,   -- Hizmet adı (Botoks, Manikür vb.)
-            aktif   INTEGER DEFAULT 1       -- 0=pasif, 1=aktif
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            ad            TEXT NOT NULL UNIQUE,
+            sure_dakika   INTEGER DEFAULT 30,   -- İşlem süresi (dk): 30, 45, 60, 90...
+            aktif         INTEGER DEFAULT 1
         )
     ''')
     
@@ -165,6 +166,72 @@ def init_db():
             son_kullanim TEXT NOT NULL,  -- Token geçerlilik süresi
             kullanildi  INTEGER DEFAULT 0,
             FOREIGN KEY (musteri_id) REFERENCES musteriler(id)
+        )
+    ''')
+
+    # -------------------------------------------------------
+    # TABLO 5: personel_uzmanliklar
+    # Personel ↔ Hizmet çoka-çok ilişkisi
+    # Analoji: Bir doktorun birden fazla branşı olabilir,
+    #          bir branşta birden fazla doktor çalışabilir.
+    # -------------------------------------------------------
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS personel_uzmanliklar (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            personel_id INTEGER NOT NULL,
+            hizmet_id   INTEGER NOT NULL,
+            UNIQUE(personel_id, hizmet_id),              -- Aynı kombinasyon 2 kez girilemesin
+            FOREIGN KEY (personel_id) REFERENCES personeller(id),
+            FOREIGN KEY (hizmet_id)   REFERENCES hizmetler(id)
+        )
+    ''')
+
+    # -------------------------------------------------------
+    # TABLO 6: personel_calisma_saatleri
+    # Her personel için gün bazlı çalışma aralığı.
+    # gun: 0=Pazartesi, 1=Salı, ... 6=Pazar (Python weekday())
+    # -------------------------------------------------------
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS personel_calisma_saatleri (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            personel_id     INTEGER NOT NULL,
+            gun             INTEGER NOT NULL,   -- 0-6 arası
+            baslangic_saat  TEXT NOT NULL,      -- HH:MM
+            bitis_saat      TEXT NOT NULL,      -- HH:MM
+            UNIQUE(personel_id, gun),
+            FOREIGN KEY (personel_id) REFERENCES personeller(id)
+        )
+    ''')
+
+    # -------------------------------------------------------
+    # TABLO 7: tatil_gunleri
+    # Personel bazlı veya sistem geneli tatil/izin günleri.
+    # personel_id NULL ise sistem geneli (resmi tatil vb.)
+    # -------------------------------------------------------
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS tatil_gunleri (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            personel_id INTEGER,                -- NULL = tüm sistem için
+            tarih       TEXT NOT NULL,          -- YYYY-MM-DD
+            aciklama    TEXT,                   -- "Kurban Bayramı", "Yıllık İzin" vb.
+            FOREIGN KEY (personel_id) REFERENCES personeller(id)
+        )
+    ''')
+
+    # -------------------------------------------------------
+    # TABLO 8: loglar
+    # Sistem olaylarının kaydı — kim, ne zaman, ne yaptı.
+    # -------------------------------------------------------
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS loglar (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            zaman       TEXT DEFAULT (datetime('now')),
+            seviye      TEXT DEFAULT 'INFO',    -- INFO | WARNING | ERROR | AUDIT
+            kullanici   TEXT,                   -- ad_soyad veya 'sistem'
+            rol         TEXT,                   -- musteri | personel | admin | sistem
+            islem       TEXT NOT NULL,          -- Kısa eylem açıklaması
+            detay       TEXT,                   -- JSON veya uzun açıklama
+            ip_adresi   TEXT
         )
     ''')
 

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block baslik %}Çalışma Saatleri – {{ personel.ad_soyad }}{% endblock %}
+
+{% block icerik %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>
+        <i class="bi bi-clock text-danger"></i>
+        {{ personel.ad_soyad }} — Çalışma Saatleri
+    </h4>
+    <a href="{{ url_for('admin.personeller') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Geri
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Çalışmayan günleri boş bırakın. Başlangıç saati bitiş saatinden küçük olmalıdır.
+        </p>
+        <form method="POST">
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Gün</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for idx, gun_adi in enumerate(gunler) %}
+                        <tr>
+                            <td class="fw-bold">{{ gun_adi }}</td>
+                            <td>
+                                <input type="time" name="bas_{{ idx }}"
+                                       class="form-control form-control-sm"
+                                       value="{{ mevcut[idx].baslangic_saat if idx in mevcut else '' }}"
+                                       style="width:130px;">
+                            </td>
+                            <td>
+                                <input type="time" name="bitis_{{ idx }}"
+                                       class="form-control form-control-sm"
+                                       value="{{ mevcut[idx].bitis_saat if idx in mevcut else '' }}"
+                                       style="width:130px;">
+                            </td>
+                            <td>
+                                {% if idx in mevcut %}
+                                    <span class="badge bg-success">Çalışıyor</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Kapalı</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-save"></i> Kaydet
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

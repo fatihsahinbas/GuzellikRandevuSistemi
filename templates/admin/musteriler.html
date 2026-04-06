@@ -4,6 +4,40 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4><i class="bi bi-people text-danger"></i> Müşteri Yönetimi</h4>
 </div>
+
+<!--
+  Arama formu — GET metodu kullanır.
+  GET ile gönderince arama terimi URL'de görünür (?q=...).
+  Bu sayede kullanıcı linki paylaşabilir veya geri dönebilir.
+-->
+<form method="GET" action="{{ url_for('admin.musteriler') }}" class="mb-3">
+    <div class="input-group">
+        <span class="input-group-text bg-danger text-white">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text"
+               name="q"
+               class="form-control"
+               placeholder="Ad, soyad, telefon veya e-posta ile ara..."
+               value="{{ arama_terimi }}"
+               autofocus>
+        <button class="btn btn-danger" type="submit">Ara</button>
+        {% if arama_terimi %}
+        <a href="{{ url_for('admin.musteriler') }}"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg"></i> Temizle
+        </a>
+        {% endif %}
+    </div>
+</form>
+
+{% if arama_terimi %}
+<p class="text-muted small mb-2">
+    "<strong>{{ arama_terimi }}</strong>" için
+    <strong>{{ musteriler|length }}</strong> sonuç bulundu.
+</p>
+{% endif %}
+
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">

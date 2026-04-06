@@ -60,6 +60,7 @@ def create_app():
 # Ana sayfa yönlendirmesi
 # -------------------------------------------------------
 app = create_app()
+app.jinja_env.globals['enumerate'] = enumerate
 
 @app.route('/')
 def index():

@@ -97,23 +97,33 @@ def panel():
 @admin_gerekli
 def musteriler():
     """
-    Tüm müşterileri listeler.
-    Puan sıralaması ve gelmeme sayısı ile birlikte gösterir.
+    Müşteri listesi — ada, telefona veya e-postaya göre arama destekler.
+
+    Arama, URL query parametresiyle çalışır: /admin/musteriler?q=ahmet
+    Bu sayede arama sonucu URL'de kalır, sayfa yenilenince kaybolmaz.
     """
     db = get_db()
+    q = request.args.get('q', '').strip()   # Arama terimi
 
-    # Müşteri listesi + randevu sayısı
-    musteri_listesi = db.execute('''
-        SELECT m.*,
-               COUNT(r.id) AS toplam_randevu,
-               SUM(CASE WHEN r.durum='tamamlandi' THEN 1 ELSE 0 END) AS tamamlanan
-        FROM musteriler m
-        LEFT JOIN randevular r ON m.id = r.musteri_id
-        GROUP BY m.id
-        ORDER BY m.puan DESC
-    ''').fetchall()
+    if q:
+        # LIKE ile kısmi eşleşme: %ahmet% → "ahmet" içeren her şey
+        # Hem ad-soyad hem telefon hem e-postada ara
+        arama = f'%{q}%'
+        musteri_listesi = db.execute('''
+            SELECT * FROM musteriler
+            WHERE (ad_soyad LIKE ?
+               OR  telefon  LIKE ?
+               OR  email    LIKE ?)
+            ORDER BY ad_soyad
+        ''', (arama, arama, arama)).fetchall()
+    else:
+        musteri_listesi = db.execute(
+            'SELECT * FROM musteriler ORDER BY ad_soyad'
+        ).fetchall()
 
-    return render_template('admin/musteriler.html', musteriler=musteri_listesi)
+    return render_template('admin/musteriler.html',
+                           musteriler=musteri_listesi,
+                           arama_terimi=q)
 
 
 @admin_bp.route('/musteri-durum/<int:musteri_id>', methods=['POST'])
@@ -167,50 +177,198 @@ def personeller():
 @admin_gerekli
 def personel_ekle():
     """
-    Yeni personel hesabı oluşturur.
-    Admin bu sayfadan personel ekler, personeller sisteme kayıt olamaz.
+    Yeni personel ekler. Uzmanlıklar artık çoklu seçimli (checkbox).
+    Her seçilen hizmet personel_uzmanliklar tablosuna ayrı satır olarak girer.
     """
-    if request.method == 'POST':
-        ad_soyad = request.form.get('ad_soyad', '').strip()
-        email    = request.form.get('email', '').strip()
-        sifre    = request.form.get('sifre', '').strip()
-        uzmanlik = request.form.get('uzmanlik', '').strip()
+    from utils.logger import log_admin
+    db = get_db()
+    hizmetler = db.execute(
+        'SELECT * FROM hizmetler WHERE aktif=1 ORDER BY ad'
+    ).fetchall()
 
-        # Validasyon
+    if request.method == 'POST':
+        ad_soyad       = request.form.get('ad_soyad', '').strip()
+        email          = request.form.get('email', '').strip()
+        sifre          = request.form.get('sifre', '').strip()
+        # getlist → birden fazla checkbox değerini liste olarak alır
+        uzmanlik_idler = request.form.getlist('uzmanlik_ids')
+
         hatalar = []
         gecerli, mesaj = ad_soyad_gecerli_mi(ad_soyad)
         if not gecerli: hatalar.append(mesaj)
 
         gecerli, mesaj = email_gecerli_mi(email)
-        if not gecerli or not email: hatalar.append('Geçerli bir e-posta giriniz.')
+        if not gecerli: hatalar.append('Geçerli bir e-posta giriniz.')
 
         gecerli, mesaj = sifre_gecerli_mi(sifre)
         if not gecerli: hatalar.append(mesaj)
 
-        if not uzmanlik:
-            hatalar.append('Uzmanlık alanı zorunludur.')
+        if not uzmanlik_idler:
+            hatalar.append('En az bir uzmanlık seçmelisiniz.')
 
         if hatalar:
             for h in hatalar: flash(h, 'danger')
-            return render_template('admin/personel_ekle.html')
+            return render_template('admin/personel_ekle.html', hizmetler=hizmetler)
 
-        db = get_db()
-
-        # E-posta benzersiz mi?
         if db.execute('SELECT id FROM personeller WHERE email=?', (email,)).fetchone():
-            flash('Bu e-posta adresi zaten kayıtlı.', 'danger')
-            return render_template('admin/personel_ekle.html')
+            flash('Bu e-posta zaten kayıtlı.', 'danger')
+            return render_template('admin/personel_ekle.html', hizmetler=hizmetler)
 
-        db.execute('''
+        # Personeli ekle
+        cursor = db.execute('''
             INSERT INTO personeller (ad_soyad, email, sifre_hash, uzmanlik, rol)
             VALUES (?, ?, ?, ?, 'personel')
-        ''', (ad_soyad, email, hash_sifre(sifre), uzmanlik))
+        ''', (ad_soyad, email, hash_sifre(sifre), ','.join(uzmanlik_idler)))
+        db.commit()
+        personel_id = cursor.lastrowid
+
+        # Uzmanlıkları ilişki tablosuna ekle
+        for hizmet_id in uzmanlik_idler:
+            db.execute('''
+                INSERT OR IGNORE INTO personel_uzmanliklar (personel_id, hizmet_id)
+                VALUES (?, ?)
+            ''', (personel_id, int(hizmet_id)))
         db.commit()
 
-        flash(f'{ad_soyad} personel olarak eklendi.', 'success')
+        log_admin('personel_ekle', f'{ad_soyad} eklendi, {len(uzmanlik_idler)} uzmanlık')
+        flash(f'{ad_soyad} başarıyla eklendi.', 'success')
         return redirect(url_for('admin.personeller'))
 
-    return render_template('admin/personel_ekle.html')
+    return render_template('admin/personel_ekle.html', hizmetler=hizmetler)
+
+@admin_bp.route('/personel-calisma/<int:personel_id>', methods=['GET', 'POST'])
+@admin_gerekli
+def personel_calisma(personel_id):
+    """
+    Personelin haftalık çalışma saatlerini tanımlar.
+    Her gün için ayrı başlangıç-bitiş saati girilebilir.
+    Çalışılmayan günler boş bırakılır.
+    """
+    from utils.logger import log_admin
+    db  = get_db()
+    p   = db.execute('SELECT * FROM personeller WHERE id=?', (personel_id,)).fetchone()
+    if not p:
+        flash('Personel bulunamadı.', 'danger')
+        return redirect(url_for('admin.personeller'))
+
+    GUNLER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+
+    if request.method == 'POST':
+        # Mevcut saatleri sil, yenileriyle değiştir
+        db.execute('DELETE FROM personel_calisma_saatleri WHERE personel_id=?', (personel_id,))
+
+        for gun_idx in range(7):
+            bas  = request.form.get(f'bas_{gun_idx}', '').strip()
+            bitis = request.form.get(f'bitis_{gun_idx}', '').strip()
+            if bas and bitis and bas < bitis:   # İkisi de doluysa kaydet
+                db.execute('''
+                    INSERT INTO personel_calisma_saatleri
+                        (personel_id, gun, baslangic_saat, bitis_saat)
+                    VALUES (?, ?, ?, ?)
+                ''', (personel_id, gun_idx, bas, bitis))
+
+        db.commit()
+        log_admin('calisma_saati_guncelle', f'{p["ad_soyad"]} çalışma saatleri güncellendi')
+        flash('Çalışma saatleri kaydedildi.', 'success')
+        return redirect(url_for('admin.personeller'))
+
+    # Mevcut saatleri sözlüğe çevir: {gun_idx: row}
+    mevcut = {
+        row['gun']: row
+        for row in db.execute(
+            'SELECT * FROM personel_calisma_saatleri WHERE personel_id=?',
+            (personel_id,)
+        ).fetchall()
+    }
+
+    return render_template('admin/personel_calisma.html',
+                           personel=p, gunler=GUNLER, mevcut=mevcut)
+
+
+@admin_bp.route('/tatil-gunleri', methods=['GET', 'POST'])
+@admin_gerekli
+def tatil_gunleri():
+    """
+    Sistem geneli veya personel bazlı tatil/izin günü tanımlar.
+    personel_id boş → sistem geneli tatil (resmi tatil, bayram vb.)
+    personel_id dolu → o personelin izin günü
+    """
+    from utils.logger import log_admin
+    db = get_db()
+
+    if request.method == 'POST':
+        eylem = request.form.get('eylem')
+
+        if eylem == 'ekle':
+            tarih       = request.form.get('tarih', '').strip()
+            aciklama    = request.form.get('aciklama', '').strip()
+            personel_id = request.form.get('personel_id') or None
+
+            if not tarih:
+                flash('Tarih zorunludur.', 'danger')
+            else:
+                db.execute('''
+                    INSERT INTO tatil_gunleri (personel_id, tarih, aciklama)
+                    VALUES (?, ?, ?)
+                ''', (personel_id, tarih, aciklama))
+                db.commit()
+                hedef = 'Sistem geneli' if not personel_id else 'Personel izni'
+                log_admin('tatil_ekle', f'{hedef}: {tarih} — {aciklama}')
+                flash(f'{tarih} tarihi tatil olarak eklendi.', 'success')
+
+        elif eylem == 'sil':
+            tatil_id = request.form.get('tatil_id')
+            db.execute('DELETE FROM tatil_gunleri WHERE id=?', (tatil_id,))
+            db.commit()
+            log_admin('tatil_sil', f'Tatil #{tatil_id} silindi')
+            flash('Tatil günü silindi.', 'info')
+
+        return redirect(url_for('admin.tatil_gunleri'))
+
+    # Tüm tatilleri çek — personel adıyla birlikte
+    tatiller = db.execute('''
+        SELECT t.*, p.ad_soyad AS personel_adi
+        FROM tatil_gunleri t
+        LEFT JOIN personeller p ON t.personel_id = p.id
+        ORDER BY t.tarih DESC
+    ''').fetchall()
+
+    personel_listesi = db.execute(
+        "SELECT id, ad_soyad FROM personeller WHERE rol='personel' AND aktif=1"
+    ).fetchall()
+
+    return render_template('admin/tatil_gunleri.html',
+                           tatiller=tatiller, personeller=personel_listesi)
+
+
+@admin_bp.route('/loglar')
+@admin_gerekli
+def loglar():
+    """
+    Sistem loglarını admin panelinde gösterir.
+    Seviye ve islem bazlı filtreleme destekler.
+    """
+    db  = get_db()
+    seviye = request.args.get('seviye', '')
+    islem  = request.args.get('islem', '')
+
+    sorgu  = 'SELECT * FROM loglar WHERE 1=1'
+    params = []
+
+    if seviye:
+        sorgu += ' AND seviye = ?'
+        params.append(seviye)
+    if islem:
+        sorgu += ' AND islem LIKE ?'
+        params.append(f'%{islem}%')
+
+    sorgu += ' ORDER BY id DESC LIMIT 500'
+
+    log_listesi = db.execute(sorgu, params).fetchall()
+    return render_template('admin/loglar.html',
+                           loglar=log_listesi,
+                           aktif_seviye=seviye,
+                           aktif_islem=islem)
 
 
 @admin_bp.route('/tum-randevular')
@@ -379,7 +537,13 @@ def hizmetler():
             if mevcut:
                 flash('Bu hizmet zaten mevcut.', 'warning')
             else:
-                db.execute('INSERT INTO hizmetler (ad) VALUES (?)', (ad,))
+                #db.execute('INSERT INTO hizmetler (ad) VALUES (?)', (ad,))
+                
+                sure = int(request.form.get('sure_dakika', 30))
+                db.execute(
+                    'INSERT INTO hizmetler (ad, sure_dakika) VALUES (?, ?)',
+                    (ad, sure)
+                )
                 db.commit()
                 flash(f'"{ad}" hizmeti eklendi.', 'success')
 
@@ -408,3 +572,4 @@ def hizmet_aktif(hizmet_id):
     db.commit()
     flash('Hizmet aktifleştirildi.', 'success')
     return redirect(url_for('admin.hizmetler'))
+

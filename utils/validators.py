@@ -181,3 +181,68 @@ def email_gecerli_mi(email: str) -> tuple[bool, str]:
         return False, "Geçerli bir e-posta adresi giriniz."
 
     return True, ""
+
+def cakisma_var_mi(db, personel_id: int, tarih: str,
+                   yeni_saat: str, yeni_sure_dk: int,
+                   haric_randevu_id: int | None = None) -> bool:
+    """
+    Yeni randevunun mevcut randevularla çakışıp çakışmadığını kontrol eder.
+
+    Mantık (zaman çizelgesi analojisi):
+        Her randevu bir "blok" gibidir: başlangıç saatinden
+        (başlangıç + süre) dakikasına kadar o personeli meşgul eder.
+        Yeni randevu bu bloklardan herhangi biriyle örtüşüyorsa çakışır.
+
+    Örnek:
+        Mevcut: 10:00, 60 dk  → 10:00–11:00 arası dolu
+        Yeni:   10:30, 30 dk  → 10:30–11:00 → ÇAKIŞIR
+        Yeni:   11:00, 30 dk  → 11:00–11:30 → ÇAKIŞMAZ
+
+    Args:
+        db              : Veritabanı bağlantısı
+        personel_id     : Hangi personelin takvimi kontrol edilecek
+        tarih           : YYYY-MM-DD formatında tarih
+        yeni_saat       : HH:MM formatında yeni randevu saati
+        yeni_sure_dk    : Yeni randevunun süresi (dakika)
+        hariç_randevu_id: Düzenleme durumunda kendisiyle çakışmasını önler
+
+    Returns:
+        True → çakışma VAR (randevuyu reddet)
+        False → çakışma YOK (randevuya izin ver)
+    """
+    from datetime import datetime, timedelta
+
+    # Yeni randevunun başlangıç ve bitiş zamanı
+    fmt = '%H:%M'
+    yeni_bas  = datetime.strptime(yeni_saat, fmt)
+    yeni_bitis = yeni_bas + timedelta(minutes=yeni_sure_dk)
+
+    # O personelin o günkü aktif randevularını çek
+    # Her randevuyla birlikte o randevunun hizmet süresini de getir
+    sorgu = '''
+        SELECT r.saat, h.sure_dakika
+        FROM randevular r
+        JOIN hizmetler h ON r.islem = h.ad
+        WHERE r.personel_id = ?
+          AND r.tarih = ?
+          AND r.durum IN ('beklemede', 'onaylandi')
+    '''
+    params = [personel_id, tarih]
+
+    if haric_randevu_id is not None:
+        sorgu += ' AND r.id != ?'
+        params.append(str(haric_randevu_id))
+
+    mevcut_randevular = db.execute(sorgu, params).fetchall()
+
+    for mevcut in mevcut_randevular:
+        m_bas   = datetime.strptime(mevcut['saat'], fmt)
+        m_bitis = m_bas + timedelta(minutes=mevcut['sure_dakika'] or 30)
+
+        # Örtüşme kontrolü:
+        # İki blok çakışır ←→ biri diğerinden önce biter DEĞİLse
+        # Yani: yeni_bas < m_bitis VE yeni_bitis > m_bas
+        if yeni_bas < m_bitis and yeni_bitis > m_bas:
+            return True   # Çakışma var
+
+    return False   # Çakışma yok

@@ -91,93 +91,99 @@ def panel():
 @musteri_bp.route('/randevu-al', methods=['GET', 'POST'])
 @giris_gerekli
 def randevu_al():
-    """
-    Randevu talebi oluşturma sayfası.
-
-    DFD 2.0 – Randevu Talebi Oluştur:
-        Müşteri: işlem seçer → personel seçer → tarih/saat seçer
-
-    DFD 3.0 – Uygunluk Kontrolü:
-        Seçilen tarih+saat+personel için randevu veritabanını
-        kontrol eder. Müsait ise onaylar, değilse reddeder.
-
-    DFD notlarından:
-        Adım 3, 4 ve 5 aynı sayfada (tek formda) olacak.
-    """
     db = get_db()
 
-    # Tüm aktif personelleri getir (işlem seçimi için)
-    personeller = db.execute(
-        'SELECT * FROM personeller WHERE aktif = 1 AND rol = "personel" ORDER BY ad_soyad'
-    ).fetchall()
+    # Uzmanlığa göre personel — hizmetler ile JOIN
+    personeller = db.execute('''
+        SELECT DISTINCT p.id, p.ad_soyad
+        FROM personeller p
+        JOIN personel_uzmanliklar pu ON p.id = pu.personel_id
+        JOIN hizmetler h ON pu.hizmet_id = h.id
+        WHERE p.aktif = 1 AND p.rol = 'personel' AND h.aktif = 1
+        ORDER BY p.ad_soyad
+    ''').fetchall()
 
-    # Mevcut işlem türlerini personel uzmanlıklarından derle
     islemler = db.execute(
-        'SELECT * FROM hizmetler WHERE aktif = 1 ORDER BY ad ASC'
+        'SELECT * FROM hizmetler WHERE aktif=1 ORDER BY ad'
     ).fetchall()
 
     if request.method == 'POST':
-        # Form verilerini al
-        islem      = request.form.get('islem', '').strip()
-        personel_id = request.form.get('personel_id', '').strip()
-        tarih      = request.form.get('tarih', '').strip()
-        saat       = request.form.get('saat', '').strip()
+        from utils.validators import cakisma_var_mi
+        from utils.logger import log_randevu
+        from datetime import datetime, timedelta
 
-        # --------------------------------------------------
-        # Temel boşluk kontrolü
-        # --------------------------------------------------
-        if not all([islem, personel_id, tarih, saat]):
-            flash('Tüm alanları doldurunuz.', 'danger')
-            return render_template('musteri/randevu_al.html',
-                                   personeller=personeller, islemler=islemler)
+        personel_id = int(request.form.get('personel_id', 0))
+        islem       = request.form.get('islem', '').strip()
+        tarih       = request.form.get('tarih', '').strip()
+        saat        = request.form.get('saat', '').strip()
 
-        # --------------------------------------------------
-        # Tarih validasyonu
-        # --------------------------------------------------
-        gecerli, mesaj = tarih_gecerli_mi(tarih)
-        if not gecerli:
-            flash(mesaj, 'danger')
-            return render_template('musteri/randevu_al.html',
-                                   personeller=personeller, islemler=islemler)
+        # --- Tatil günü kontrolü ---
+        # Hem sistem geneli hem o personele özel tatil var mı?
+        tatil = db.execute('''
+            SELECT aciklama FROM tatil_gunleri
+            WHERE tarih = ?
+              AND (personel_id IS NULL OR personel_id = ?)
+            LIMIT 1
+        ''', (tarih, personel_id)).fetchone()
 
-        # --------------------------------------------------
-        # DFD 3.0 – Uygunluk Kontrolü
-        # Aynı personel, aynı tarih, aynı saatte başka randevu var mı?
-        # --------------------------------------------------
-        cakisan = db.execute('''
-            SELECT id FROM randevular
-            WHERE personel_id = ?
-              AND tarih = ?
-              AND saat = ?
-              AND durum IN ('beklemede', 'onaylandi')
-        ''', (personel_id, tarih, saat)).fetchone()
-
-        if cakisan:
-            # Müsait değil → reddet ve alternatif saat öner
+        if tatil:
             flash(
-                f'Seçilen tarih ve saat ({tarih} {saat}) dolu. '
-                'Lütfen farklı bir saat seçiniz.',
+                f'{tarih} tarihi tatil/izin günü: '
+                f'{tatil["aciklama"] or "Kapalı"}. '
+                'Lütfen başka bir tarih seçin.',
                 'warning'
             )
             return render_template('musteri/randevu_al.html',
                                    personeller=personeller, islemler=islemler)
 
-        # --------------------------------------------------
-        # Müsait → Randevu talebini kaydet (durum='beklemede')
-        # DFD 4.0 – Onaylanan Randevu Kaydı (personel onaylar)
-        # --------------------------------------------------
+        # --- Çalışma saati kontrolü ---
+        # Python weekday(): 0=Pazartesi, 6=Pazar
+        tarih_dt = datetime.strptime(tarih, '%Y-%m-%d')
+        gun_idx  = tarih_dt.weekday()
+
+        calisma = db.execute('''
+            SELECT baslangic_saat, bitis_saat
+            FROM personel_calisma_saatleri
+            WHERE personel_id = ? AND gun = ?
+        ''', (personel_id, gun_idx)).fetchone()
+
+        if calisma:
+            # Seçilen saat çalışma aralığında mı?
+            if not (calisma['baslangic_saat'] <= saat < calisma['bitis_saat']):
+                flash(
+                    f'Bu personel {["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"][gun_idx]} '
+                    f'günü {calisma["baslangic_saat"]}–{calisma["bitis_saat"]} saatleri arasında çalışmaktadır.',
+                    'warning'
+                )
+                return render_template('musteri/randevu_al.html',
+                                       personeller=personeller, islemler=islemler)
+        # Çalışma saati tanımlanmamışsa kısıtlama yok (varsayılan: her saat açık)
+
+        # --- Akıllı çakışma kontrolü (madde 3'ten) ---
+        hizmet   = db.execute('SELECT sure_dakika FROM hizmetler WHERE ad=?', (islem,)).fetchone()
+        yeni_sure = hizmet['sure_dakika'] if hizmet else 30
+
+        if cakisma_var_mi(db, personel_id, tarih, saat, yeni_sure):
+            flash(
+                f'Seçilen saat ({saat}) dolu — önceki randevu henüz tamamlanmamış. '
+                f'En az {yeni_sure} dakika sonrasına bir saat seçin.',
+                'warning'
+            )
+            return render_template('musteri/randevu_al.html',
+                                   personeller=personeller, islemler=islemler)
+
+        # --- Randevuyu kaydet ---
         musteri_id = session['kullanici_id']
-        db.execute('''
-            INSERT INTO randevular (musteri_id, personel_id, islem, tarih, saat, durum)
-            VALUES (?, ?, ?, ?, ?, 'beklemede')
+        cursor = db.execute('''
+            INSERT INTO randevular (musteri_id, personel_id, islem, tarih, saat)
+            VALUES (?, ?, ?, ?, ?)
         ''', (musteri_id, personel_id, islem, tarih, saat))
         db.commit()
 
-        flash(
-            f'Randevu talebiniz alındı! {tarih} tarihinde {saat} saatinde '
-            f'"{islem}" işlemi için onay bekleniyor.',
-            'success'
-        )
+        log_randevu('olustur', cursor.lastrowid,
+                    f'{islem} — {tarih} {saat}')
+
+        flash(f'Randevu talebiniz alındı! {tarih} {saat} — onay bekleniyor.', 'success')
         return redirect(url_for('musteri.randevularim'))
 
     return render_template('musteri/randevu_al.html',
@@ -214,6 +220,70 @@ def randevularim():
     return render_template('musteri/randevularim.html',
                            randevular=randevular,
                            degerlendirilmis=degerlendirilmis)
+    
+import json
+
+@musteri_bp.route('/takvim')
+@giris_gerekli
+def takvim():
+    """
+    Müşterinin randevularını takvim görünümünde gösterir.
+    FullCalendar.js için veriyi ayrı bir endpoint'ten (takvim_veri) çekeriz.
+    """
+    return render_template('musteri/takvim.html')
+
+
+@musteri_bp.route('/takvim-veri')
+@giris_gerekli
+def takvim_veri():
+    """
+    FullCalendar.js'in beklediği JSON formatında randevu verisi döndürür.
+
+    FullCalendar her olayı şu yapıda bekler:
+    {
+        "title": "Görünen başlık",
+        "start": "2024-03-15T10:30:00",   ← ISO 8601 format
+        "color": "#renk_kodu",
+        "extendedProps": { ... }           ← ekstra veri
+    }
+    """
+    from flask import jsonify
+    db = get_db()
+    musteri_id = session['kullanici_id']
+
+    randevular = db.execute('''
+        SELECT r.tarih, r.saat, r.islem, r.durum,
+               p.ad_soyad AS personel_adi
+        FROM randevular r
+        JOIN personeller p ON r.personel_id = p.id
+        WHERE r.musteri_id = ?
+    ''', (musteri_id,)).fetchall()
+
+    # Durum → renk eşlemesi
+    # Tıpkı trafik ışıkları gibi: beklemede=sarı, onaylı=yeşil, iptal=kırmızı
+    renk_haritasi = {
+        'beklemede':   '#f39c12',   # turuncu-sarı
+        'onaylandi':   '#27ae60',   # yeşil
+        'tamamlandi':  '#2980b9',   # mavi
+        'reddedildi':  '#e74c3c',   # kırmızı
+        'gelmedi':     '#95a5a6',   # gri
+    }
+
+    etkinlikler = []
+    for r in randevular:
+        etkinlikler.append({
+            'title': f"{r['saat']} – {r['islem']}",
+            # FullCalendar "YYYY-MM-DDTHH:MM" formatını anlar
+            'start': f"{r['tarih']}T{r['saat']}:00",
+            'color': renk_haritasi.get(r['durum'], '#7f8c8d'),
+            'extendedProps': {
+                'durum':       r['durum'],
+                'personel':    r['personel_adi'],
+                'islem':       r['islem'],
+            }
+        })
+
+    return jsonify(etkinlikler)    
 
 
 @musteri_bp.route('/degerlendirme/<int:randevu_id>', methods=['GET', 'POST'])

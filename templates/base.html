@@ -203,10 +203,16 @@
               <a class="nav-link" href="{{ url_for('admin.musteriler') }}">
                 <i class="bi bi-people"></i> Müşteriler
               </a>
+              <a class="nav-link" href="{{ url_for('musteri.takvim') }}">
+                <i class="bi bi-calendar3"></i> Takvim
+              </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('admin.personeller') }}">
                 <i class="bi bi-person-badge"></i> Personeller
+              </a>
+              <a class="nav-link" href="{{ url_for('personel.takvim') }}">
+                <i class="bi bi-calendar3"></i> Takvim
               </a>
             </li>
             <li class="nav-item">
@@ -228,6 +234,16 @@
               <span class="nav-link text-danger">
                 <i class="bi bi-shield-fill"></i> Admin
               </span>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.tatil_gunleri') }}">
+                <i class="bi bi-calendar-x"></i> Tatil/İzin
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin.loglar') }}">
+                <i class="bi bi-journal-text"></i> Loglar
+              </a>
             </li>
             {% endif %}
 

@@ -24,6 +24,9 @@ from utils.auth_helper import (hash_sifre, sifre_dogru_mu,
                                 musteri_giris_yap, personel_giris_yap)
 from utils.validators import (ad_soyad_gecerli_mi, telefon_gecerli_mi,
                                sifre_gecerli_mi, email_gecerli_mi)
+from utils.logger import log_giris
+
+
 
 # Blueprint oluştur; name='auth' → url_for('auth.login_page') şeklinde kullanılır
 auth_bp = Blueprint('auth', __name__)
@@ -70,7 +73,12 @@ def login_page():
             if not musteri['aktif']:
                 flash('Hesabınız pasife alınmıştır. Lütfen iletişime geçin.', 'warning')
                 return render_template('auth/login.html')
+            
+            # Başarılı giriş
+            log_giris(basarili=True, kullanici_adi=telefon, rol='musteri')
 
+            # Başarısız giriş (else kısmına):
+            log_giris(basarili=False, kullanici_adi=telefon, rol='musteri')
             # Session'ı oluştur ve müşteri paneline yönlendir
             musteri_giris_yap(musteri['id'], musteri['ad_soyad'])
             flash(f'Hoş geldiniz, {musteri["ad_soyad"]}!', 'success')

@@ -123,6 +123,59 @@ def randevular():
                            randevular=randevu_listesi,
                            aktif_filtre=durum_filtre)
 
+@personel_bp.route('/takvim')
+@personel_giris_gerekli
+def takvim():
+    """
+    Personelin randevularını takvim görünümünde gösterir.
+    """
+    return render_template('personel/takvim.html')
+
+
+@personel_bp.route('/takvim-veri')
+@personel_giris_gerekli
+def takvim_veri():
+    """
+    FullCalendar.js için personelin randevularını JSON döndürür.
+    Personel yalnızca kendi randevularını görür.
+    """
+    from flask import jsonify
+    db = get_db()
+    personel_id = session['kullanici_id']
+
+    randevular = db.execute('''
+        SELECT r.tarih, r.saat, r.islem, r.durum,
+               m.ad_soyad AS musteri_adi,
+               m.telefon  AS musteri_telefon
+        FROM randevular r
+        JOIN musteriler m ON r.musteri_id = m.id
+        WHERE r.personel_id = ?
+    ''', (personel_id,)).fetchall()
+
+    renk_haritasi = {
+        'beklemede':   '#f39c12',
+        'onaylandi':   '#27ae60',
+        'tamamlandi':  '#2980b9',
+        'reddedildi':  '#e74c3c',
+        'gelmedi':     '#95a5a6',
+    }
+
+    etkinlikler = []
+    for r in randevular:
+        etkinlikler.append({
+            'title': f"{r['saat']} – {r['musteri_adi']}",
+            'start': f"{r['tarih']}T{r['saat']}:00",
+            'color': renk_haritasi.get(r['durum'], '#7f8c8d'),
+            'extendedProps': {
+                'durum':    r['durum'],
+                'musteri':  r['musteri_adi'],
+                'telefon':  r['musteri_telefon'],
+                'islem':    r['islem'],
+            }
+        })
+
+    return jsonify(etkinlikler)
+
 
 @personel_bp.route('/onayla/<int:randevu_id>', methods=['POST'])
 @personel_giris_gerekli
