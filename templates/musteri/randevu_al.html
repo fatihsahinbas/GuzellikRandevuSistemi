@@ -60,7 +60,7 @@ endblock %} {% block icerik %}
               {% for personel in personeller %}
               <div
                 class="col-md-6 personel-kart"
-                data-uzmanlik="{{ personel['uzmanlik'] }}"
+                data-uzmanlik="{{ personel['uzmanlik'] | tojson }}"
               >
                 <div
                   class="card border h-100 personel-secim-karti"
@@ -73,7 +73,7 @@ endblock %} {% block icerik %}
                       style="font-size: 2rem"
                     ></i>
                     <h6 class="mt-2 mb-1">{{ personel['ad_soyad'] }}</h6>
-                    <small class="text-muted">{{ personel['uzmanlik'] }}</small>
+                    <small class="text-muted">{{ personel['uzmanlik_str'] }}</small>
                   </div>
                 </div>
               </div>
@@ -150,9 +150,9 @@ endblock %} {% block icerik %}
     const kartlar = document.querySelectorAll(".personel-kart");
 
     kartlar.forEach((kart) => {
-      const uzmanlik = kart.dataset.uzmanlik;
-      // Hiç işlem seçilmemişse veya uzmanlık eşleşiyorsa göster
-      if (!seciliIslem || uzmanlik === seciliIslem) {
+      const uzmanliklar = JSON.parse(kart.dataset.uzmanlik || '[]');
+      // Hiç işlem seçilmemişse hepsini göster, seçildiyse uzmanlık listesinde ara
+      if (!seciliIslem || uzmanliklar.includes(seciliIslem)) {
         kart.style.display = "block";
       } else {
         kart.style.display = "none";
@@ -162,7 +162,8 @@ endblock %} {% block icerik %}
     // Önceki personel seçimini temizle
     document.getElementById("personelId").value = "";
     document.querySelectorAll(".personel-secim-karti").forEach((k) => {
-      k.classList.remove("border-danger", "bg-danger", "text-white");
+      k.classList.remove("border-danger");
+      k.style.backgroundColor = "";
     });
   }
 

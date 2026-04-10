@@ -93,8 +93,8 @@ def panel():
 def randevu_al():
     db = get_db()
 
-    # Uzmanlığa göre personel — hizmetler ile JOIN
-    personeller = db.execute('''
+    # Uzmanlığa göre personel — hizmet adlarıyla birlikte getir
+    personeller_raw = db.execute('''
         SELECT DISTINCT p.id, p.ad_soyad
         FROM personeller p
         JOIN personel_uzmanliklar pu ON p.id = pu.personel_id
@@ -102,6 +102,22 @@ def randevu_al():
         WHERE p.aktif = 1 AND p.rol = 'personel' AND h.aktif = 1
         ORDER BY p.ad_soyad
     ''').fetchall()
+
+    # Her personelin uzmanlık isimlerini liste olarak ekle
+    personeller = []
+    for p in personeller_raw:
+        hizmetler_row = db.execute('''
+            SELECT h.ad FROM hizmetler h
+            JOIN personel_uzmanliklar pu ON h.id = pu.hizmet_id
+            WHERE pu.personel_id = ? AND h.aktif = 1
+        ''', (p['id'],)).fetchall()
+        uzmanlik_listesi = [h['ad'] for h in hizmetler_row]
+        personeller.append({
+            'id': p['id'],
+            'ad_soyad': p['ad_soyad'],
+            'uzmanlik': uzmanlik_listesi,           # liste: ['Botoks', 'Dolgu']
+            'uzmanlik_str': ', '.join(uzmanlik_listesi)  # gösterim için
+        })
 
     islemler = db.execute(
         'SELECT * FROM hizmetler WHERE aktif=1 ORDER BY ad'

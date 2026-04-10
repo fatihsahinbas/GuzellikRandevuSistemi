@@ -20,6 +20,7 @@
             <th>Toplam Randevu</th>
             <th>Ort. Puan</th>
             <th>Durum</th>
+            <th>İşlem</th>
           </tr>
         </thead>
         <tbody>
@@ -28,7 +29,13 @@
             <td>{{ p['id'] }}</td>
             <td><strong>{{ p['ad_soyad'] }}</strong></td>
             <td>{{ p['email'] }}</td>
-            <td><span class="badge bg-secondary">{{ p['uzmanlik'] }}</span></td>
+            <td>
+              {% for uzmanlik in personel_uzmanliklar.get(p['id'], []) %}
+                <span class="badge bg-secondary me-1">{{ uzmanlik }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endfor %}
+            </td>
             <td>{{ p['toplam_randevu'] or 0 }}</td>
             <td>
               {% if p['ort_puan'] %}
@@ -40,19 +47,16 @@
               {% endif %}
             </td>
             <td>
-              <span
-                class="badge {{ 'bg-success' if p['aktif'] else 'bg-danger' }}"
-              >
+              <span class="badge {{ 'bg-success' if p['aktif'] else 'bg-danger' }}">
                 {{ 'Aktif' if p['aktif'] else 'Pasif' }}
               </span>
             </td>
-            <a
-              href="{{ url_for('admin.personel_calisma', personel_id=p.id) }}"
-              class="btn btn-outline-primary btn-sm"
-              title="Çalışma Saatleri"
-            >
-              <i class="bi bi-clock"></i>
-            </a>
+            <td>
+              <a href="{{ url_for('admin.personel_duzenle', personel_id=p.id) }}"
+                 class="btn btn-outline-warning btn-sm" title="Düzenle">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

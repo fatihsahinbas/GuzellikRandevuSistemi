@@ -170,7 +170,20 @@ def personeller():
         ORDER BY ort_puan DESC NULLS LAST
     ''').fetchall()
 
-    return render_template('admin/personeller.html', personeller=personel_listesi)
+    # Her personel için uzmanlık isimlerini ayrıca çek
+    personel_uzmanliklar = {}
+    for p in personel_listesi:
+        hizmetler = db.execute('''
+            SELECT h.ad FROM hizmetler h
+            JOIN personel_uzmanliklar pu ON h.id = pu.hizmet_id
+            WHERE pu.personel_id = ?
+            ORDER BY h.ad
+        ''', (p['id'],)).fetchall()
+        personel_uzmanliklar[p['id']] = [h['ad'] for h in hizmetler]
+
+    return render_template('admin/personeller.html',
+                           personeller=personel_listesi,
+                           personel_uzmanliklar=personel_uzmanliklar)
 
 
 @admin_bp.route('/personel-ekle', methods=['GET', 'POST'])
@@ -236,7 +249,135 @@ def personel_ekle():
 
     return render_template('admin/personel_ekle.html', hizmetler=hizmetler)
 
-@admin_bp.route('/personel-calisma/<int:personel_id>', methods=['GET', 'POST'])
+
+@admin_bp.route('/personel-duzenle/<int:personel_id>', methods=['GET', 'POST'])
+@admin_gerekli
+def personel_duzenle(personel_id):
+    """
+    Mevcut personelin tüm bilgilerini tek sayfada düzenler:
+      - Ad-soyad, e-posta
+      - Şifre (boş bırakılırsa değişmez)
+      - Uzmanlıklar (checkbox — tamamen yeniden yazılır)
+      - Çalışma saatleri (7 gün)
+    """
+    from utils.logger import log_admin
+    db = get_db()
+
+    personel = db.execute(
+        'SELECT * FROM personeller WHERE id=?', (personel_id,)
+    ).fetchone()
+
+    if not personel:
+        flash('Personel bulunamadı.', 'danger')
+        return redirect(url_for('admin.personeller'))
+
+    hizmetler = db.execute(
+        'SELECT * FROM hizmetler WHERE aktif=1 ORDER BY ad'
+    ).fetchall()
+
+    # Mevcut uzmanlık id'leri
+    mevcut_uzmanliklar = set(
+        row['hizmet_id'] for row in db.execute(
+            'SELECT hizmet_id FROM personel_uzmanliklar WHERE personel_id=?',
+            (personel_id,)
+        ).fetchall()
+    )
+
+    GUNLER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+
+    # Mevcut çalışma saatleri
+    mevcut_saatler = {
+        row['gun']: row
+        for row in db.execute(
+            'SELECT * FROM personel_calisma_saatleri WHERE personel_id=?',
+            (personel_id,)
+        ).fetchall()
+    }
+
+    if request.method == 'POST':
+        ad_soyad       = request.form.get('ad_soyad', '').strip()
+        email          = request.form.get('email', '').strip()
+        sifre          = request.form.get('sifre', '').strip()
+        uzmanlik_idler = request.form.getlist('uzmanlik_ids')
+
+        from utils.validators import ad_soyad_gecerli_mi, email_gecerli_mi
+        hatalar = []
+
+        gecerli, mesaj = ad_soyad_gecerli_mi(ad_soyad)
+        if not gecerli:
+            hatalar.append(mesaj)
+
+        gecerli, mesaj = email_gecerli_mi(email)
+        if not gecerli:
+            hatalar.append('Geçerli bir e-posta giriniz.')
+
+        if not uzmanlik_idler:
+            hatalar.append('En az bir uzmanlık seçmelisiniz.')
+
+        # E-posta başkasına ait mi?
+        baska = db.execute(
+            'SELECT id FROM personeller WHERE email=? AND id!=?',
+            (email, personel_id)
+        ).fetchone()
+        if baska:
+            hatalar.append('Bu e-posta başka bir personele ait.')
+
+        if hatalar:
+            for h in hatalar:
+                flash(h, 'danger')
+            return render_template('admin/personel_duzenle.html',
+                                   personel=personel, hizmetler=hizmetler,
+                                   mevcut_uzmanliklar=mevcut_uzmanliklar,
+                                   gunler=GUNLER, mevcut_saatler=mevcut_saatler)
+
+        # Temel bilgileri güncelle
+        if sifre:
+            db.execute('''
+                UPDATE personeller
+                SET ad_soyad=?, email=?, sifre_hash=?
+                WHERE id=?
+            ''', (ad_soyad, email, hash_sifre(sifre), personel_id))
+        else:
+            db.execute('''
+                UPDATE personeller
+                SET ad_soyad=?, email=?
+                WHERE id=?
+            ''', (ad_soyad, email, personel_id))
+
+        # Uzmanlıkları sıfırla ve yeniden yaz
+        db.execute(
+            'DELETE FROM personel_uzmanliklar WHERE personel_id=?', (personel_id,)
+        )
+        for hizmet_id in uzmanlik_idler:
+            db.execute('''
+                INSERT OR IGNORE INTO personel_uzmanliklar (personel_id, hizmet_id)
+                VALUES (?, ?)
+            ''', (personel_id, int(hizmet_id)))
+
+        # Çalışma saatlerini sıfırla ve yeniden yaz
+        db.execute(
+            'DELETE FROM personel_calisma_saatleri WHERE personel_id=?', (personel_id,)
+        )
+        for gun_idx in range(7):
+            bas   = request.form.get(f'bas_{gun_idx}', '').strip()
+            bitis = request.form.get(f'bitis_{gun_idx}', '').strip()
+            if bas and bitis and bas < bitis:
+                db.execute('''
+                    INSERT INTO personel_calisma_saatleri
+                        (personel_id, gun, baslangic_saat, bitis_saat)
+                    VALUES (?, ?, ?, ?)
+                ''', (personel_id, gun_idx, bas, bitis))
+
+        db.commit()
+        log_admin('personel_duzenle', f'{ad_soyad} güncellendi')
+        flash(f'{ad_soyad} başarıyla güncellendi.', 'success')
+        return redirect(url_for('admin.personeller'))
+
+    return render_template('admin/personel_duzenle.html',
+                           personel=personel, hizmetler=hizmetler,
+                           mevcut_uzmanliklar=mevcut_uzmanliklar,
+                           gunler=GUNLER, mevcut_saatler=mevcut_saatler)
+
 @admin_gerekli
 def personel_calisma(personel_id):
     """
@@ -572,4 +713,3 @@ def hizmet_aktif(hizmet_id):
     db.commit()
     flash('Hizmet aktifleştirildi.', 'success')
     return redirect(url_for('admin.hizmetler'))
-
