@@ -27,13 +27,13 @@ Sistem üç farklı kullanıcı rolüne hizmet eder:
 
 | Rol | Açıklama |
 |-----|----------|
-| 🧑 **Müşteri** | Randevu alır, değerlendirme yapar, geçmişini görür |
-| 👩‍⚕️ **Personel** | Randevuları onaylar, gelme durumunu işler, değerlendirmeleri görür |
-| 🛡️ **Admin** | Tüm sistemi yönetir, istatistikleri izler, personel ekler |
+|  **Müşteri** | Randevu alır, değerlendirme yapar, geçmişini görür |
+|  **Personel** | Randevuları onaylar, gelme durumunu işler, değerlendirmeleri görür |
+|  **Admin** | Tüm sistemi yönetir, istatistikleri izler, personel ekler |
 
 ---
 
-## 🗂️ DFD ile Kod Eşleşmesi
+##  DFD ile Kod Eşleşmesi
 
 DFD diyagramındaki her işlem biriminin kod karşılığı:
 
@@ -64,33 +64,33 @@ DFD diyagramındaki her işlem biriminin kod karşılığı:
 ## ✨ Özellikler
 
 ### Müşteri Özellikleri
-- ✅ Telefon numarası + şifre ile giriş
-- ✅ Ad-Soyad ve telefon validasyonu (sadece harf / sadece rakam)
-- ✅ İşlem, personel, tarih ve saat seçimi (tek sayfada)
-- ✅ Randevu uygunluk kontrolü (çakışma engelleme)
-- ✅ Randevu iptal etme (sadece beklemedekiler)
-- ✅ Tamamlanan randevuları değerlendirme (1-5 yıldız sistemi)
-- ✅ Puan takibi (zamanında gelme → +10, gelmeme → -20)
+-  Telefon numarası + şifre ile giriş
+-  Ad-Soyad ve telefon validasyonu (sadece harf / sadece rakam)
+-  İşlem, personel, tarih ve saat seçimi (tek sayfada)
+-  Randevu uygunluk kontrolü (çakışma engelleme)
+-  Randevu iptal etme (sadece beklemedekiler)
+-  Tamamlanan randevuları değerlendirme (1-5 yıldız sistemi)
+-  Puan takibi (zamanında gelme → +10, gelmeme → -20)
 
 ### Personel Özellikleri
-- ✅ E-posta + şifre ile giriş
-- ✅ Bugünkü randevuları görme
-- ✅ Randevu onaylama / reddetme
-- ✅ Müşteriye e-posta hatırlatması gönderme (Gmail SMTP)
-- ✅ Gelme durumu güncelleme (tamamlandı / gelmedi)
-- ✅ Kendi değerlendirmelerini ve ortalama puanlarını görme
+-  E-posta + şifre ile giriş
+-  Bugünkü randevuları görme
+-  Randevu onaylama / reddetme
+-  Müşteriye e-posta hatırlatması gönderme (Gmail SMTP)
+-  Gelme durumu güncelleme (tamamlandı / gelmedi)
+-  Kendi değerlendirmelerini ve ortalama puanlarını görme
 
 ### Admin Özellikleri
-- ✅ Sistem geneli dashboard (istatistikler)
-- ✅ Tüm müşterileri listeleme ve ban/unban
-- ✅ Personel ekleme ve listeleme
-- ✅ Tüm randevuları filtreleme (durum, tarih)
-- ✅ Toplu e-posta hatırlatması gönderme
-- ✅ İstatistikler sayfası (aylık randevular, popüler işlemler, performans)
+-  Sistem geneli dashboard (istatistikler)
+-  Tüm müşterileri listeleme ve ban/unban
+-  Personel ekleme ve listeleme
+-  Tüm randevuları filtreleme (durum, tarih)
+-  Toplu e-posta hatırlatması gönderme
+-  İstatistikler sayfası (aylık randevular, popüler işlemler, performans)
 
 ---
 
-## 📁 Proje Yapısı
+##  Proje Yapısı
 
 ```
 randevu_sistemi/
@@ -139,7 +139,7 @@ randevu_sistemi/
 
 ---
 
-## 🚀 Kurulum
+##  Kurulum
 
 ### 1. Gereksinimleri Karşıla
 
@@ -203,11 +203,11 @@ python app.py
 ```
 
 Tarayıcında şu adrese git:  
-👉 **http://localhost:5000**
+ **http://localhost:5000**
 
 ---
 
-## 📖 Kullanım Kılavuzu
+##  Kullanım Kılavuzu
 
 ### Müşteri Olarak Giriş
 
@@ -234,7 +234,7 @@ Tarayıcında şu adrese git:
 E-posta: admin@guzellikmerkezi.com
 Şifre:   admin123
 ```
-> ⚠️ İlk girişten sonra şifreyi değiştirmeyi unutma!
+>  İlk girişten sonra şifreyi değiştirmeyi unutma!
 
 1. Dashboard'dan sisteme genel bakış
 2. **Personel Ekle** → Yeni çalışan hesabı oluştur
@@ -243,7 +243,7 @@ E-posta: admin@guzellikmerkezi.com
 
 ---
 
-## 🗄️ Veritabanı Tasarımı
+##  Veritabanı Tasarımı
 
 SQLite veritabanı (`randevu.db`) uygulama başladığında otomatik oluşturulur.
 
@@ -284,7 +284,7 @@ SQLite veritabanı (`randevu.db`) uygulama başladığında otomatik oluşturulu
 
 ---
 
-## 🌐 API Route Tablosu
+##  API Route Tablosu
 
 | Method | URL | Açıklama |
 |--------|-----|----------|
@@ -344,7 +344,7 @@ Her iki kontrol hem JS hem Python'da uygulanır
 
 ---
 
-## ❓ Sık Sorulan Sorular
+##  Sık Sorulan Sorular
 
 **S: E-posta gönderilmiyor, ne yapmalıyım?**  
 C: `config.py`'deki `MAIL_USERNAME` ve `MAIL_PASSWORD` değerlerini kontrol et. Gmail'de "Uygulama Şifresi" oluşturman gerekiyor, normal şifren çalışmaz.
@@ -363,7 +363,7 @@ C: SHA-256 tek yönlü bir fonksiyondur. `"abc123"` → her zaman aynı hash ür
 
 ---
 
-## 📚 Kullanılan Teknolojiler
+##  Kullanılan Teknolojiler
 
 | Teknoloji | Sürüm | Kullanım Amacı |
 |-----------|-------|----------------|
@@ -377,7 +377,7 @@ C: SHA-256 tek yönlü bir fonksiyondur. `"abc123"` → her zaman aynı hash ür
 
 ---
 
-## 🎓 Notlar
+##  Notlar
 
 Bu projeyi incelerken dikkat etmen gereken kavramlar:
 

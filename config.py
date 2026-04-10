@@ -22,7 +22,7 @@ class Config:
     # Güvenlik anahtarı – session ve cookie şifrelemesi için
     # Üretimde rastgele uzun bir string olmalı!
     # --------------------------------------------------
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'gizli-anahtar-2024-degistir')
+    SECRET_KEY = os.environ.get('SECRET_KEY', '2f1f1450b79c7a1793dace9d3d08c9a735ebcbad9949bc65')
 
     # --------------------------------------------------
     # Veritabanı dosyasının yolu
