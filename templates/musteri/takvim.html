@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block baslik %}Takvimim – MedicalPoint{% endblock %}
+
+{% block ekstra_css %}
+<!-- FullCalendar CSS — takvim bileşeninin stilleri -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
+<style>
+    /* Takvim genel kapsayıcı */
+    #takvim {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    /* Randevu kutucuklarını tıklanabilir göster */
+    .fc-event { cursor: pointer; }
+
+    /* Modal içi durum rozeti */
+    .durum-rozet {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block icerik %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar3 text-danger"></i> Randevu Takvimim</h4>
+    <!-- Liste görünümüne geri dön -->
+    <a href="{{ url_for('musteri.randevularim') }}"
+       class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul"></i> Liste Görünümü
+    </a>
+</div>
+
+<!-- Renk açıklaması -->
+<div class="d-flex flex-wrap gap-3 mb-3">
+    <span><span style="background:#f39c12" class="durum-rozet">■</span> Beklemede</span>
+    <span><span style="background:#27ae60" class="durum-rozet">■</span> Onaylandı</span>
+    <span><span style="background:#2980b9" class="durum-rozet">■</span> Tamamlandı</span>
+    <span><span style="background:#e74c3c" class="durum-rozet">■</span> İptal/Red</span>
+    <span><span style="background:#95a5a6" class="durum-rozet">■</span> Gelmedi</span>
+</div>
+
+<!-- Takvim alanı — FullCalendar buraya render eder -->
+<div class="card shadow-sm p-3">
+    <div id="takvim"></div>
+</div>
+
+<!-- Randevu detay modal'ı — randevuya tıklanınca açılır -->
+<div class="modal fade" id="randevuModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar-event"></i> Randevu Detayı
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="fw-bold text-muted" width="35%">İşlem</td>
+                        <td id="m-islem">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Tarih / Saat</td>
+                        <td id="m-tarih">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Personel</td>
+                        <td id="m-personel">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Durum</td>
+                        <td id="m-durum">—</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm"
+                        data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block ekstra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // FullCalendar başlatma
+    // Tıpkı bir çerçeve gibi: biz ayarları veririz, kütüphane çizer
+    const takvimEl = document.getElementById('takvim');
+    const takvim = new FullCalendar.Calendar(takvimEl, {
+
+        // Türkçe dil paketi
+        locale: 'tr',
+
+        // Başlangıç görünümü: aylık grid
+        initialView: 'dayGridMonth',
+
+        // Üst araç çubuğu düzeni
+        // sol: gezinme butonları | orta: başlık | sağ: görünüm geçişi
+        headerToolbar: {
+            left:   'prev,next today',
+            center: 'title',
+            right:  'dayGridMonth,timeGridWeek'   // aylık ↔ haftalık geçiş
+        },
+
+        // Görünüm buton etiketleri Türkçe
+        buttonText: {
+            today:        'Bugün',
+            month:        'Aylık',
+            week:         'Haftalık',
+        },
+
+        // Randevu verilerini Flask API'den çek
+        // FullCalendar bu URL'yi otomatik olarak çağırır
+        events: '{{ url_for("musteri.takvim_veri") }}',
+
+        // Randevuya tıklanınca modal aç
+        eventClick: function(bilgi) {
+            const olay = bilgi.event;
+            const props = olay.extendedProps;
+
+            // Tarih + saati okunabilir formata çevir
+            const baslangic = olay.start;
+            const tarihStr = baslangic.toLocaleDateString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+            const saatStr = baslangic.toLocaleTimeString('tr-TR', {
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            // Modal alanlarını doldur
+            document.getElementById('m-islem').textContent   = props.islem;
+            document.getElementById('m-tarih').textContent   = `${tarihStr} – ${saatStr}`;
+            document.getElementById('m-personel').textContent = props.personel;
+
+            // Durum rozeti — rengi JS ile belirle
+            const renkler = {
+                beklemede:  '#f39c12',
+                onaylandi:  '#27ae60',
+                tamamlandi: '#2980b9',
+                reddedildi: '#e74c3c',
+                gelmedi:    '#95a5a6',
+            };
+            const etiketler = {
+                beklemede:  'Beklemede',
+                onaylandi:  'Onaylandı',
+                tamamlandi: 'Tamamlandı',
+                reddedildi: 'İptal / Red',
+                gelmedi:    'Gelmedi',
+            };
+            const renk  = renkler[props.durum]  || '#7f8c8d';
+            const etiket = etiketler[props.durum] || props.durum;
+
+            document.getElementById('m-durum').innerHTML =
+                `<span class="durum-rozet" style="background:${renk}">${etiket}</span>`;
+
+            // Bootstrap modal'ı aç
+            new bootstrap.Modal(document.getElementById('randevuModal')).show();
+        },
+
+        // Haftalık görünümde çalışma saatleri aralığını vurgula
+        slotMinTime: '08:00:00',
+        slotMaxTime: '21:00:00',
+
+        // Hücre tıklamasını devre dışı bırak (müşteri takvimden randevu alamaz)
+        dateClick: null,
+    });
+
+    takvim.render();
+});
+</script>
+{% endblock %}

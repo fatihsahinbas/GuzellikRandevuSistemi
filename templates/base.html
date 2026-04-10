@@ -1,0 +1,454 @@
+<!doctype html>
+<!--
+  templates/base.html  –  Ana Şablon (Base Template)
+  =====================================================
+  Navigasyon: Offcanvas sidebar (soldan açılır)
+  Navbar: sadece hamburger + logo + kullanıcı adı (tıklanamaz)
+-->
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block baslik %}Güzellik Merkezi Randevu Sistemi{% endblock %}
+    </title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ================================================
+         GENEL STİL AYARLARI
+         ================================================ */
+      :root {
+        --mp-kirmizi: #dc3545;
+        --mp-koyu:    #212529;
+        --mp-acik:    #f8f9fa;
+      }
+
+      body {
+        background-color: #f5f6fa;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      /* ── Navbar ──────────────────────────────────── */
+      .navbar {
+        min-height: 56px;
+      }
+
+      .navbar-brand {
+        font-weight: 700;
+        font-size: 1.3rem;
+        color: var(--mp-kirmizi) !important;
+        white-space: nowrap;
+      }
+
+      /* Hamburger butonu */
+      .btn-menu {
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: rgba(255,255,255,0.85);
+        background: transparent;
+        transition: background 0.15s, border-color 0.15s;
+        font-size: 1.2rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .btn-menu:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.4);
+        color: #fff;
+      }
+
+      /* Kullanıcı adı etiketi (tıklanamaz, sade) */
+      .user-label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #ffc107;
+        font-weight: 600;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        cursor: default;
+        user-select: none;
+      }
+
+      /* ── Offcanvas sidebar ───────────────────────── */
+      #sidebarMenu {
+        width: 260px;
+        background: #1a1d21;
+      }
+
+      .offcanvas-header {
+        background: #212529;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 14px 18px;
+      }
+
+      .offcanvas-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--mp-kirmizi);
+      }
+
+      .offcanvas-body {
+        padding: 10px 8px;
+        overflow-y: auto;
+      }
+
+      /* Sidebar bölüm başlığı */
+      .sidebar-section {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6c757d;
+        padding: 12px 12px 3px;
+        margin: 0;
+      }
+
+      /* Sidebar nav linkleri */
+      .sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-radius: 8px;
+        color: rgba(255,255,255,0.72);
+        text-decoration: none;
+        font-size: 0.88rem;
+        transition: background 0.15s, color 0.15s;
+        margin-bottom: 1px;
+      }
+      .sidebar-link:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+      }
+      .sidebar-link.active {
+        background: var(--mp-kirmizi);
+        color: #fff !important;
+      }
+      .sidebar-link i {
+        font-size: 1rem;
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+
+      /* Sidebar kullanıcı kartı (üstte) */
+      .sidebar-user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        margin-bottom: 4px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.05);
+      }
+      .sidebar-user-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #ffc107;
+        line-height: 1.2;
+      }
+      .sidebar-user-role {
+        font-size: 0.72rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Sidebar ayraç */
+      .sidebar-divider {
+        border-color: rgba(255,255,255,0.08);
+        margin: 6px 12px;
+      }
+
+      /* ── Kartlar ─────────────────────────────────── */
+      .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      }
+
+      /* ── Durum rozetleri ─────────────────────────── */
+      .badge-beklemede  { background-color: #ffc107; color: #000; }
+      .badge-onaylandi  { background-color: #28a745; }
+      .badge-reddedildi { background-color: #dc3545; }
+      .badge-tamamlandi { background-color: #17a2b8; }
+      .badge-gelmedi    { background-color: #6c757d; }
+
+      /* ── Puan renkleri ───────────────────────────── */
+      .puan-yuksek { color: #28a745; font-weight: bold; }
+      .puan-orta   { color: #ffc107; font-weight: bold; }
+      .puan-dusuk  { color: #dc3545; font-weight: bold; }
+
+      /* ── Sidebar aktif link (eski uyumluluk) ─────── */
+      .sidebar .nav-link.active {
+        background-color: var(--mp-kirmizi);
+        color: white !important;
+        border-radius: 8px;
+      }
+
+      /* ── Flash mesajları ─────────────────────────── */
+      .alert {
+        border-radius: 10px;
+        border: none;
+      }
+
+      /* ── Footer ──────────────────────────────────── */
+      footer {
+        background: var(--mp-koyu);
+        color: #adb5bd;
+        padding: 15px 0;
+        margin-top: 40px;
+      }
+    </style>
+
+    {% block ekstra_css %}{% endblock %}
+  </head>
+
+  <body>
+
+    <!-- ================================================
+         NAVBAR  —  Hamburger | Logo | Kullanıcı adı
+         ================================================ -->
+    <nav class="navbar navbar-dark bg-dark shadow-sm">
+      <div class="container">
+
+        <!-- Sol: Hamburger + Logo -->
+        <div class="d-flex align-items-center gap-2">
+          {% if session.kullanici_id %}
+          <button
+            class="btn-menu"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#sidebarMenu"
+            aria-controls="sidebarMenu"
+            aria-label="Menüyü aç"
+          >
+            <i class="bi bi-list"></i>
+          </button>
+          {% endif %}
+
+          <a class="navbar-brand mb-0" href="/">
+            <i class="bi bi-hospital-fill text-danger"></i>
+            Güzellik Merkezi
+          </a>
+        </div>
+
+        <!-- Sağ: Sadece kullanıcı adı (tıklanamaz etiket) -->
+        {% if session.kullanici_id %}
+        <div class="user-label">
+          <i class="bi bi-person-circle"></i>
+          {{ session.kullanici_adi }}
+        </div>
+        {% endif %}
+
+      </div>
+    </nav>
+
+
+    <!-- ================================================
+         OFFCANVAS SIDEBAR
+         ================================================ -->
+    {% if session.kullanici_id %}
+    <div
+      class="offcanvas offcanvas-start"
+      tabindex="-1"
+      id="sidebarMenu"
+      aria-labelledby="sidebarLabel"
+    >
+      <!-- Sidebar başlık -->
+      <div class="offcanvas-header">
+        <span class="offcanvas-title" id="sidebarLabel">
+          <i class="bi bi-hospital-fill text-danger me-1"></i>
+          Güzellik Merkezi
+        </span>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="offcanvas"
+          aria-label="Kapat"
+        ></button>
+      </div>
+
+      <div class="offcanvas-body d-flex flex-column">
+
+        <!-- Kullanıcı kartı -->
+        <div class="sidebar-user">
+          <i class="bi bi-person-circle text-warning fs-4"></i>
+          <div>
+            <div class="sidebar-user-name">{{ session.kullanici_adi }}</div>
+            <div class="sidebar-user-role">
+              {% if session.kullanici_rol == 'musteri' %}Müşteri
+              {% elif session.kullanici_rol == 'personel' %}Personel
+              {% elif session.kullanici_rol == 'admin' %}Yönetici
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <hr class="sidebar-divider">
+
+        {# ═══════════════════════════════════
+           MÜŞTERİ MENÜSÜ
+           ═══════════════════════════════════ #}
+        {% if session.kullanici_rol == 'musteri' %}
+
+        <p class="sidebar-section">Ana Menü</p>
+        <a class="sidebar-link" href="{{ url_for('musteri.panel') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-house"></i> Panelim
+        </a>
+        <a class="sidebar-link" href="{{ url_for('musteri.randevu_al') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-calendar-plus"></i> Randevu Al
+        </a>
+        <a class="sidebar-link" href="{{ url_for('musteri.randevularim') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-calendar-check"></i> Randevularım
+        </a>
+
+        <hr class="sidebar-divider">
+        <p class="sidebar-section">Hesap</p>
+        <a class="sidebar-link" href="{{ url_for('musteri.profil') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-person-gear"></i> Profilim
+        </a>
+
+
+        {# ═══════════════════════════════════
+           PERSONEL MENÜSÜ
+           ═══════════════════════════════════ #}
+        {% elif session.kullanici_rol == 'personel' %}
+
+        <p class="sidebar-section">Randevu</p>
+        <a class="sidebar-link" href="{{ url_for('personel.panel') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-grid"></i> Panel
+        </a>
+        <a class="sidebar-link" href="{{ url_for('personel.randevular') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-calendar3"></i> Randevular
+        </a>
+        <a class="sidebar-link" href="{{ url_for('personel.degerlendirmelerim') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-star"></i> Değerlendirmeler
+        </a>
+
+        <hr class="sidebar-divider">
+        <p class="sidebar-section">Hesap</p>
+        <a class="sidebar-link" href="{{ url_for('personel.sifre_degistir') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-key"></i> Şifre Değiştir
+        </a>
+
+
+        {# ═══════════════════════════════════
+           ADMİN MENÜSÜ
+           ═══════════════════════════════════ #}
+        {% elif session.kullanici_rol == 'admin' %}
+
+        <p class="sidebar-section">Genel</p>
+        <a class="sidebar-link" href="{{ url_for('admin.panel') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+
+        <hr class="sidebar-divider">
+        <p class="sidebar-section">Yönetim</p>
+        <a class="sidebar-link" href="{{ url_for('admin.musteriler') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-people"></i> Müşteriler
+        </a>
+        <a class="sidebar-link" href="{{ url_for('admin.personeller') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-person-badge"></i> Personeller
+        </a>
+        <a class="sidebar-link" href="{{ url_for('admin.tum_randevular') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-calendar3"></i> Randevular
+        </a>
+        <a class="sidebar-link" href="{{ url_for('admin.hizmetler') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-scissors"></i> Hizmetler
+        </a>
+        <a class="sidebar-link" href="{{ url_for('admin.tatil_gunleri') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-calendar-x"></i> Tatil / İzin
+        </a>
+
+        <hr class="sidebar-divider">
+        <p class="sidebar-section">Raporlar</p>
+        <a class="sidebar-link" href="{{ url_for('admin.istatistikler') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-bar-chart"></i> İstatistikler
+        </a>
+        <a class="sidebar-link" href="{{ url_for('admin.loglar') }}" data-bs-dismiss="offcanvas">
+          <i class="bi bi-journal-text"></i> Loglar
+        </a>
+
+        {% endif %}
+
+        <!-- Çıkış — her zaman en altta -->
+        <div class="mt-auto">
+          <hr class="sidebar-divider">
+          <a class="sidebar-link text-danger fw-semibold" href="{{ url_for('auth.cikis') }}">
+            <i class="bi bi-box-arrow-right"></i> Çıkış Yap
+          </a>
+        </div>
+
+      </div><!-- /.offcanvas-body -->
+    </div><!-- /#sidebarMenu -->
+    {% endif %}
+
+
+    <!-- ================================================
+         ANA İÇERİK ALANI
+         ================================================ -->
+    <main class="container mt-4 mb-5">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for kategori, mesaj in messages %}
+          <div class="alert alert-{{ kategori }} alert-dismissible fade show shadow-sm"
+               role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ mesaj }}
+            <button type="button" class="btn-close"
+                    data-bs-dismiss="alert" aria-label="Kapat"></button>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block icerik %}{% endblock %}
+
+    </main>
+
+
+    <!-- ================================================
+         FOOTER
+         ================================================ -->
+    <footer class="text-center">
+      <div class="container">
+        <p class="mb-0">
+          <i class="bi bi-hospital-fill text-danger"></i>
+          Güzellik Merkezi Randevu Sistemi &copy; 2024 &nbsp;|&nbsp;
+          <small>Flask + SQLite</small>
+        </p>
+      </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS (Popper dahil) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        /* Aktif sidebar linkini işaretle */
+        var path = window.location.pathname;
+        document.querySelectorAll('.sidebar-link').forEach(function (el) {
+          if (el.getAttribute('href') === path) {
+            el.classList.add('active');
+          }
+        });
+      });
+    </script>
+
+    {% block ekstra_js %}{% endblock %}
+  </body>
+</html>

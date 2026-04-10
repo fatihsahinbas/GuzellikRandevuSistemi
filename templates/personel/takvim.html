@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block baslik %}Takvim – Personel Paneli{% endblock %}
+
+{% block ekstra_css %}
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
+<style>
+    #takvim { max-width: 1100px; margin: 0 auto; }
+    .fc-event { cursor: pointer; }
+    .durum-rozet {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block icerik %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calendar3 text-danger"></i> Randevu Takvimi</h4>
+    <a href="{{ url_for('personel.randevular') }}"
+       class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul"></i> Liste Görünümü
+    </a>
+</div>
+
+<!-- Renk açıklaması -->
+<div class="d-flex flex-wrap gap-3 mb-3">
+    <span><span style="background:#f39c12" class="durum-rozet">■</span> Beklemede</span>
+    <span><span style="background:#27ae60" class="durum-rozet">■</span> Onaylandı</span>
+    <span><span style="background:#2980b9" class="durum-rozet">■</span> Tamamlandı</span>
+    <span><span style="background:#e74c3c" class="durum-rozet">■</span> İptal/Red</span>
+    <span><span style="background:#95a5a6" class="durum-rozet">■</span> Gelmedi</span>
+</div>
+
+<div class="card shadow-sm p-3">
+    <div id="takvim"></div>
+</div>
+
+<!-- Randevu detay modal -->
+<div class="modal fade" id="randevuModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar-event"></i> Randevu Detayı
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="fw-bold text-muted" width="35%">Müşteri</td>
+                        <td id="m-musteri">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Telefon</td>
+                        <td id="m-telefon">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">İşlem</td>
+                        <td id="m-islem">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Tarih / Saat</td>
+                        <td id="m-tarih">—</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Durum</td>
+                        <td id="m-durum">—</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm"
+                        data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block ekstra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const takvimEl = document.getElementById('takvim');
+    const takvim = new FullCalendar.Calendar(takvimEl, {
+        locale: 'tr',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left:   'prev,next today',
+            center: 'title',
+            right:  'dayGridMonth,timeGridWeek'
+        },
+        buttonText: {
+            today: 'Bugün',
+            month: 'Aylık',
+            week:  'Haftalık',
+        },
+        events: '{{ url_for("personel.takvim_veri") }}',
+
+        eventClick: function(bilgi) {
+            const olay  = bilgi.event;
+            const props = olay.extendedProps;
+
+            const baslangic = olay.start;
+            const tarihStr = baslangic.toLocaleDateString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+            const saatStr = baslangic.toLocaleTimeString('tr-TR', {
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            document.getElementById('m-musteri').textContent  = props.musteri;
+            document.getElementById('m-telefon').textContent  = props.telefon;
+            document.getElementById('m-islem').textContent    = props.islem;
+            document.getElementById('m-tarih').textContent    = `${tarihStr} – ${saatStr}`;
+
+            const renkler  = {
+                beklemede: '#f39c12', onaylandi: '#27ae60',
+                tamamlandi: '#2980b9', reddedildi: '#e74c3c', gelmedi: '#95a5a6'
+            };
+            const etiketler = {
+                beklemede: 'Beklemede', onaylandi: 'Onaylandı',
+                tamamlandi: 'Tamamlandı', reddedildi: 'İptal / Red', gelmedi: 'Gelmedi'
+            };
+
+            document.getElementById('m-durum').innerHTML =
+                `<span class="durum-rozet"
+                       style="background:${renkler[props.durum] || '#7f8c8d'}">
+                    ${etiketler[props.durum] || props.durum}
+                 </span>`;
+
+            new bootstrap.Modal(document.getElementById('randevuModal')).show();
+        },
+
+        slotMinTime: '08:00:00',
+        slotMaxTime: '21:00:00',
+    });
+
+    takvim.render();
+});
+</script>
+{% endblock %}

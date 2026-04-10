@@ -1,0 +1,136 @@
+{% extends 'base.html' %} {% block baslik %}Giriş Yap – Güzellik Merkezi{%
+endblock %} {% block icerik %}
+<!--
+  templates/auth/login.html  –  Müşteri Giriş Sayfası
+  =====================================================
+  DFD 1.0 – Kullanıcı Giriş Yapması
+  Müşteri: Telefon + Şifre ile giriş yapar.
+-->
+
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <!-- Logo alanı -->
+    <div class="text-center mb-4">
+      <i class="bi bi-hospital-fill text-danger" style="font-size: 3rem"></i>
+      <h2 class="mt-2 fw-bold">Güzellik Merkezi</h2>
+      <p class="text-muted">Randevu Yönetim Sistemi</p>
+    </div>
+
+    <!-- Giriş kartı -->
+    <div class="card shadow">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4">
+          <i class="bi bi-person-circle text-danger"></i>
+          Müşteri Girişi
+        </h5>
+
+        <!-- method=POST sunucuya gönderir, action hangi route'a gideceğini belirtir -->
+        <form
+          method="POST"
+          action="{{ url_for('auth.login_page') }}"
+          id="loginForm"
+          novalidate
+        >
+          <!-- Telefon alanı -->
+          <div class="mb-3">
+            <label for="telefon" class="form-label">
+              <i class="bi bi-telephone"></i> Telefon Numarası
+            </label>
+            <input
+              type="tel"
+              class="form-control"
+              id="telefon"
+              name="telefon"
+              placeholder="05XXXXXXXXX"
+              required
+              maxlength="15"
+            />
+            <div class="form-text">Kayıt sırasında kullandığınız numara</div>
+          </div>
+
+          <!-- Şifre alanı -->
+          <div class="mb-3">
+            <label for="sifre" class="form-label">
+              <i class="bi bi-lock"></i> Şifre
+            </label>
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="sifre"
+                name="sifre"
+                required
+              />
+              <!-- Şifre göster/gizle butonu -->
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="sifreGoster()"
+              >
+                <i class="bi bi-eye" id="gozIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Giriş butonu -->
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-danger btn-lg">
+              <i class="bi bi-box-arrow-in-right"></i> Giriş Yap
+            </button>
+          </div>
+        </form>
+
+        <hr />
+
+        <!-- Kayıt ol linki -->
+        <div class="text-center">
+          <p class="mb-0">
+            Hesabınız yok mu?
+            <a
+              href="{{ url_for('auth.kayit_page') }}"
+              class="text-danger fw-bold"
+            >
+              Kayıt Ol
+            </a>
+          </p>
+          <p class="mt-2">
+            <a
+              href="{{ url_for('auth.personel_login_page') }}"
+              class="text-muted small"
+            >
+              <i class="bi bi-person-badge"></i> Personel/Yönetici Girişi
+            </a>
+          </p>
+        </div>
+        <div class="text-end mb-2">
+          <a
+            href="{{ url_for('auth.sifremi_unuttum') }}"
+            class="text-muted small"
+          >
+            Şifremi unuttum
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block ekstra_js %}
+<script>
+  /**
+   * Şifre göster/gizle fonksiyonu.
+   * type="password" ↔ type="text" arasında geçiş yapar.
+   */
+  function sifreGoster() {
+    const sifre = document.getElementById("sifre");
+    const icon = document.getElementById("gozIcon");
+
+    if (sifre.type === "password") {
+      sifre.type = "text";
+      icon.className = "bi bi-eye-slash";
+    } else {
+      sifre.type = "password";
+      icon.className = "bi bi-eye";
+    }
+  }
+</script>
+{% endblock %}

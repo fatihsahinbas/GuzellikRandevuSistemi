@@ -1,0 +1,11 @@
+# ============================================================
+# requirements.txt  –  Python Bağımlılıkları
+# ============================================================
+# Kurulum komutu: pip install -r requirements.txt
+#
+# Flask: Web çerçevesi
+# Werkzeug: Flask ile birlikte gelir, güvenlik araçları
+# ============================================================
+
+Flask==3.0.0
+Werkzeug==3.0.1

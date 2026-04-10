@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block baslik %}Personel Değerlendirme – Güzellik Merkezi{% endblock %}
+
+{% block icerik %}
+<!--
+  templates/musteri/degerlendirme.html
+  =====================================
+  DFD 8.0 – Müşterinin Formu Doldurması
+  DFD 7.0 – Personel Değerlendirme İşlemi
+
+  Kriterler: hizmet kalitesi, personel tutumu, işlem süresi
+-->
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+
+        <!-- Randevu Bilgisi -->
+        <div class="card bg-light mb-3">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Değerlendirdiğiniz Randevu</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>📅 Tarih:</strong> {{ randevu['tarih'] }}<br>
+                        <strong>🕐 Saat:</strong> {{ randevu['saat'] }}
+                    </div>
+                    <div class="col-6">
+                        <strong>💆 İşlem:</strong> {{ randevu['islem'] }}<br>
+                        <strong>👤 Personel:</strong> {{ randevu['personel_adi'] }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-star-fill"></i>
+                    Personel Değerlendirmesi
+                </h5>
+            </div>
+            <div class="card-body p-4">
+
+                <form method="POST"
+                      action="{{ url_for('musteri.degerlendirme_yap', randevu_id=randevu['id']) }}">
+
+                    <!--
+                      Yıldız derecelendirme: 1-5 arası radio butonları.
+                      CSS ile yıldız görünümü verilir.
+                    -->
+
+                    <!-- Hizmet Kalitesi -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-award"></i> Hizmet Kalitesi
+                        </label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="hizmet_puani"
+                                   id="hizmet_{{ i }}" value="{{ i }}" required>
+                            <label for="hizmet_{{ i }}" title="{{ i }} yıldız">★</label>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">Aldığınız hizmetin kalitesini değerlendirin</small>
+                    </div>
+
+                    <!-- Personel Tutumu -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-emoji-smile"></i> Personel Tutumu
+                        </label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="tutum_puani"
+                                   id="tutum_{{ i }}" value="{{ i }}" required>
+                            <label for="tutum_{{ i }}" title="{{ i }} yıldız">★</label>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">Personelin size karşı tutumunu değerlendirin</small>
+                    </div>
+
+                    <!-- İşlem Süresi -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-stopwatch"></i> İşlem Süresi
+                        </label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="sure_puani"
+                                   id="sure_{{ i }}" value="{{ i }}" required>
+                            <label for="sure_{{ i }}" title="{{ i }} yıldız">★</label>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">İşlemin zamanında tamamlanmasını değerlendirin</small>
+                    </div>
+
+                    <!-- Yorum (isteğe bağlı) -->
+                    <div class="mb-4">
+                        <label for="yorum" class="form-label fw-bold">
+                            <i class="bi bi-chat-text"></i> Yorumunuz
+                            <span class="text-muted">(isteğe bağlı)</span>
+                        </label>
+                        <textarea class="form-control" id="yorum" name="yorum"
+                                  rows="3" maxlength="500"
+                                  placeholder="Deneyiminizi paylaşın..."></textarea>
+                        <div class="form-text">Maksimum 500 karakter</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold">
+                            <i class="bi bi-send"></i> Değerlendirmeyi Gönder
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block ekstra_css %}
+<style>
+    /*
+     * YILDIZ DERECELENDİRME STİLİ
+     * ================================
+     * Radio butonları gizlenir, label'lar yıldız ★ gösterir.
+     * RTL (sağdan sola) sıralama ile 5→1 düzeni sağlanır.
+     *
+     * Nasıl çalışır:
+     *   - Radio inputlar display:none ile gizlenir
+     *   - Label'lar yıldız karakteri (★) gösterir
+     *   - :checked ~ label → seçilen ve önceki yıldızları sarı yapar
+     *   - :hover ~ label  → fare üzerindeyken önizleme yapar
+     */
+    .star-rating {
+        display: flex;
+        flex-direction: row-reverse; /* 5,4,3,2,1 sırasını 1,2,3,4,5 gösterime çevirir */
+        justify-content: flex-end;
+        font-size: 2rem;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .star-rating input[type="radio"] {
+        display: none; /* Radio buton gizle */
+    }
+
+    .star-rating label {
+        cursor: pointer;
+        color: #ddd;       /* Seçilmemiş yıldız: gri */
+        transition: color 0.15s ease;
+    }
+
+    /* Seçilen radio'nun kendisi ve sonraki kardeşleri (önceki yıldızlar) sarı */
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+        color: #ffc107;    /* Sarı yıldız */
+    }
+</style>
+{% endblock %}

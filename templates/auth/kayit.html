@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block baslik %}Kayıt Ol – Güzellik Merkezi{% endblock %}
+
+{% block icerik %}
+<!--
+  templates/auth/kayit.html  –  Müşteri Kayıt Sayfası
+  =====================================================
+  DFD 1.0 – Kullanıcı Giriş Yapması (yeni hesap oluşturma)
+  Validasyon: Hem frontend (JS) hem backend (Python) kontrol.
+-->
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+
+        <div class="text-center mb-3">
+            <i class="bi bi-person-plus-fill text-danger" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-2 fw-bold">Yeni Hesap Oluştur</h3>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body p-4">
+
+                <form method="POST" action="{{ url_for('auth.kayit_page') }}"
+                      id="kayitForm" novalidate>
+
+                    <!-- Ad Soyad -->
+                    <div class="mb-3">
+                        <label for="ad_soyad" class="form-label">
+                            <i class="bi bi-person"></i> Ad Soyad <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="ad_soyad"
+                               name="ad_soyad"
+                               placeholder="Ahmet Yılmaz"
+                               value="{{ form_data.ad_soyad if form_data else '' }}"
+                               required>
+                        <!-- Kullanıcıya kural hatırlatması -->
+                        <div class="form-text text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Yalnızca harf kullanınız (özel karakter girilirse hata alırsınız)
+                        </div>
+                        <!-- JS hata mesajı buraya yazılır -->
+                        <div class="invalid-feedback" id="adHata"></div>
+                    </div>
+
+                    <!-- Telefon -->
+                    <div class="mb-3">
+                        <label for="telefon" class="form-label">
+                            <i class="bi bi-telephone"></i> Telefon <span class="text-danger">*</span>
+                        </label>
+                        <input type="tel"
+                               class="form-control"
+                               id="telefon"
+                               name="telefon"
+                               placeholder="05XXXXXXXXX"
+                               value="{{ form_data.telefon if form_data else '' }}"
+                               required
+                               maxlength="15">
+                        <div class="form-text text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Yalnızca rakam giriniz (giriş için kullanacaksınız)
+                        </div>
+                        <div class="invalid-feedback" id="telefonHata"></div>
+                    </div>
+
+                    <!-- E-posta (isteğe bağlı) -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="bi bi-envelope"></i> E-posta
+                            <span class="text-muted">(isteğe bağlı)</span>
+                        </label>
+                        <input type="email"
+                               class="form-control"
+                               id="email"
+                               name="email"
+                               placeholder="ornek@email.com"
+                               value="{{ form_data.email if form_data else '' }}">
+                        <div class="form-text">Randevu hatırlatmaları için kullanılır</div>
+                    </div>
+
+                    <!-- Şifre -->
+                    <div class="mb-3">
+                        <label for="sifre" class="form-label">
+                            <i class="bi bi-lock"></i> Şifre <span class="text-danger">*</span>
+                        </label>
+                        <input type="password"
+                               class="form-control"
+                               id="sifre"
+                               name="sifre"
+                               minlength="6"
+                               required>
+                        <div class="form-text">En az 6 karakter, 1 harf ve 1 rakam içermeli</div>
+                    </div>
+
+                    <!-- Şifre Tekrar -->
+                    <div class="mb-3">
+                        <label for="sifre2" class="form-label">
+                            <i class="bi bi-lock-fill"></i> Şifre Tekrar <span class="text-danger">*</span>
+                        </label>
+                        <input type="password"
+                               class="form-control"
+                               id="sifre2"
+                               name="sifre2"
+                               required>
+                        <div class="invalid-feedback" id="sifre2Hata"></div>
+                    </div>
+
+                    <!-- Kayıt Butonu -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-danger btn-lg"
+                                onclick="return formKontrol()">
+                            <i class="bi bi-person-check"></i> Kayıt Ol
+                        </button>
+                    </div>
+                </form>
+
+                <hr>
+                <div class="text-center">
+                    Zaten hesabınız var mı?
+                    <a href="{{ url_for('auth.login_page') }}" class="text-danger fw-bold">
+                        Giriş Yap
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block ekstra_js %}
+<script>
+    /**
+     * Frontend (tarayıcı tarafı) form doğrulaması.
+     *
+     * NEDEN HEM FRONTEND HEM BACKEND?
+     *   - Frontend: Hızlı geri bildirim, kullanıcı deneyimi
+     *   - Backend:  Güvenlik (JS bypass edilebilir)
+     *   İkisi birlikte = hem kullanıcı dostu hem güvenli.
+     */
+    function formKontrol() {
+        let gecerli = true;
+
+        // ----- Ad-Soyad Kontrolü -----
+        const adSoyad = document.getElementById('ad_soyad').value.trim();
+        const adHata  = document.getElementById('adHata');
+        // Türkçe dahil sadece harf ve boşluk
+        const adPattern = /^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/;
+
+        if (!adPattern.test(adSoyad)) {
+            document.getElementById('ad_soyad').classList.add('is-invalid');
+            adHata.textContent = 'Ad-soyad bölümüne yalnızca harf girilebilir!';
+            gecerli = false;
+        } else {
+            document.getElementById('ad_soyad').classList.remove('is-invalid');
+            document.getElementById('ad_soyad').classList.add('is-valid');
+        }
+
+        // ----- Telefon Kontrolü -----
+        const telefon     = document.getElementById('telefon').value.trim();
+        const telefonHata = document.getElementById('telefonHata');
+        // Sadece rakam (ve isteğe bağlı baştaki +)
+        const telPattern = /^\+?[0-9]{10,12}$/;
+
+        if (!telPattern.test(telefon)) {
+            document.getElementById('telefon').classList.add('is-invalid');
+            telefonHata.textContent = 'Telefon numarasına yalnızca sayı girilebilir!';
+            gecerli = false;
+        } else {
+            document.getElementById('telefon').classList.remove('is-invalid');
+            document.getElementById('telefon').classList.add('is-valid');
+        }
+
+        // ----- Şifre Eşleşme Kontrolü -----
+        const sifre      = document.getElementById('sifre').value;
+        const sifre2     = document.getElementById('sifre2').value;
+        const sifre2Hata = document.getElementById('sifre2Hata');
+
+        if (sifre !== sifre2) {
+            document.getElementById('sifre2').classList.add('is-invalid');
+            sifre2Hata.textContent = 'Şifreler birbiriyle eşleşmiyor!';
+            gecerli = false;
+        } else {
+            document.getElementById('sifre2').classList.remove('is-invalid');
+            document.getElementById('sifre2').classList.add('is-valid');
+        }
+
+        // false → form gönderilmez, true → gönderilir
+        return gecerli;
+    }
+</script>
+{% endblock %}

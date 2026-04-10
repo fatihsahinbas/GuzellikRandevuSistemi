@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block baslik %}Tatil/İzin Günleri{% endblock %}
+
+{% block icerik %}
+<h4 class="mb-3"><i class="bi bi-calendar-x text-danger"></i> Tatil / İzin Günleri</h4>
+
+<div class="row g-4">
+    <!-- Ekleme Formu -->
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white fw-bold">
+                <i class="bi bi-plus-circle"></i> Yeni Tatil/İzin Ekle
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="eylem" value="ekle">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tarih</label>
+                        <input type="date" name="tarih" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <input type="text" name="aciklama" class="form-control"
+                               placeholder="Kurban Bayramı, Yıllık İzin...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Personel (boş = sistem geneli)</label>
+                        <select name="personel_id" class="form-select">
+                            <option value="">— Sistem Geneli —</option>
+                            {% for p in personeller %}
+                            <option value="{{ p.id }}">{{ p.ad_soyad }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Boş bırakırsanız tüm personel için geçerli olur.</div>
+                    </div>
+
+                    <button class="btn btn-danger w-100">
+                        <i class="bi bi-plus"></i> Ekle
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mevcut Tatiller -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white fw-bold">
+                <i class="bi bi-list-ul"></i> Kayıtlı Tatil/İzin Günleri
+            </div>
+            <div class="card-body p-0">
+                {% if tatiller %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Açıklama</th>
+                                <th>Kapsam</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in tatiller %}
+                            <tr>
+                                <td><strong>{{ t.tarih }}</strong></td>
+                                <td>{{ t.aciklama or '—' }}</td>
+                                <td>
+                                    {% if t.personel_adi %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-person"></i> {{ t.personel_adi }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-globe"></i> Sistem Geneli
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="POST"
+                                          onsubmit="return confirm('Silinsin mi?')">
+                                        <input type="hidden" name="eylem" value="sil">
+                                        <input type="hidden" name="tatil_id" value="{{ t.id }}">
+                                        <button class="btn btn-outline-danger btn-sm">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">Henüz tatil günü eklenmemiş.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

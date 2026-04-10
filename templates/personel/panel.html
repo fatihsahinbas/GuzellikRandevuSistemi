@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block baslik %}Personel Paneli – Güzellik Merkezi{% endblock %}
+{% block icerik %}
+
+<!-- Personel Hoşgeldin Banner -->
+<div class="card bg-dark text-white mb-4">
+  <div class="card-body d-flex justify-content-between align-items-center">
+    <div>
+      <h4><i class="bi bi-person-badge"></i> {{ session.kullanici_adi }}</h4>
+      <p class="mb-0 text-muted">Personel Paneli</p>
+    </div>
+    <div class="text-end">
+      <div class="h5">{{ bekleyen_sayi }}</div>
+      <small>Bekleyen Onay</small>
+      <br />
+      <a href="{{ url_for('personel.sifre_degistir') }}"
+         class="btn btn-sm btn-outline-light mt-2">
+        <i class="bi bi-shield-lock"></i> Şifre Değiştir
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center border-warning h-100">
+      <div class="card-body">
+        <i class="bi bi-hourglass-split text-warning" style="font-size: 2rem"></i>
+        <h3 class="mt-2">{{ bekleyen_sayi }}</h3>
+        <p class="text-muted mb-0">Bekleyen Onay</p>
+        <a href="{{ url_for('personel.randevular') }}?durum=beklemede"
+           class="btn btn-sm btn-warning mt-2">Görüntüle</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center border-success h-100">
+      <div class="card-body">
+        <i class="bi bi-calendar-check text-success" style="font-size: 2rem"></i>
+        <h3 class="mt-2">{{ bugunun_randevulari | length }}</h3>
+        <p class="text-muted mb-0">Bugünkü Randevu</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center border-primary h-100">
+      <div class="card-body">
+        <i class="bi bi-check2-all text-primary" style="font-size: 2rem"></i>
+        <h3 class="mt-2">{{ tamamlanan_sayi }}</h3>
+        <p class="text-muted mb-0">Tamamlanan</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bugünkü Randevular -->
+<div class="card shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="bi bi-calendar-day text-danger"></i>
+      Bugünkü Randevularım
+    </h5>
+    <a href="{{ url_for('personel.randevular') }}" class="btn btn-sm btn-outline-danger">
+      Tümünü Gör
+    </a>
+  </div>
+  <div class="card-body">
+    {% if bugunun_randevulari %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Saat</th>
+            <th>Müşteri</th>
+            <th>Telefon</th>
+            <th>İşlem</th>
+            <th>Durum</th>
+            <th>İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for randevu in bugunun_randevulari %}
+          <tr>
+            <td><strong>{{ randevu['saat'] }}</strong></td>
+            <td>{{ randevu['musteri_adi'] }}</td>
+            <td>
+              <a href="tel:{{ randevu['musteri_telefon'] }}">
+                {{ randevu['musteri_telefon'] }}
+              </a>
+            </td>
+            <td>{{ randevu['islem'] }}</td>
+            <td>
+              {% if randevu['durum'] == 'beklemede' %}
+                <span class="badge bg-warning text-dark">Beklemede</span>
+              {% else %}
+                <span class="badge bg-success">Onaylandı</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if randevu['durum'] == 'onaylandi' %}
+              <button class="btn btn-sm btn-outline-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#gelmeModal{{ randevu['id'] }}">
+                <i class="bi bi-person-check"></i> Gelme Durumu
+              </button>
+
+              <!-- Gelme Durumu Modal -->
+              <div class="modal fade" id="gelmeModal{{ randevu['id'] }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">
+                        Gelme Durumu – {{ randevu['musteri_adi'] }}
+                      </h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <form method="POST"
+                            action="{{ url_for('personel.gelme_durumu_guncelle', randevu_id=randevu['id']) }}">
+                        <input type="hidden" name="durum" value="tamamlandi" />
+                        <div class="mb-3">
+                          <label class="form-label">Zamanında geldi mi?</label>
+                          <div>
+                            <div class="form-check form-check-inline">
+                              <input class="form-check-input" type="radio"
+                                     name="zamaninda" value="1"
+                                     id="zamaninda1_{{ randevu['id'] }}" checked />
+                              <label class="form-check-label" for="zamaninda1_{{ randevu['id'] }}">
+                                ✅ Evet (+10 puan)
+                              </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                              <input class="form-check-input" type="radio"
+                                     name="zamaninda" value="0"
+                                     id="zamaninda0_{{ randevu['id'] }}" />
+                              <label class="form-check-label" for="zamaninda0_{{ randevu['id'] }}">
+                                ⚠️ Geç Geldi (0 puan)
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                          <i class="bi bi-check-circle"></i> Geldi – Tamamlandı
+                        </button>
+                      </form>
+
+                      <hr />
+
+                      <form method="POST"
+                            action="{{ url_for('personel.gelme_durumu_guncelle', randevu_id=randevu['id']) }}">
+                        <input type="hidden" name="durum" value="gelmedi" />
+                        <input type="hidden" name="zamaninda" value="0" />
+                        <button type="submit" class="btn btn-danger w-100"
+                                onclick="return confirm('Müşteri gelmedi olarak işaretlenecek ve -20 puan kesilecek. Emin misiniz?')">
+                          <i class="bi bi-person-x"></i> Gelmedi (-20 puan)
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {% elif randevu['durum'] == 'beklemede' %}
+              <form method="POST"
+                    action="{{ url_for('personel.randevu_onayla', randevu_id=randevu['id']) }}"
+                    class="d-inline">
+                <button type="submit" class="btn btn-sm btn-success">
+                  <i class="bi bi-check"></i> Onayla
+                </button>
+              </form>
+              <form method="POST"
+                    action="{{ url_for('personel.randevu_reddet', randevu_id=randevu['id']) }}"
+                    class="d-inline">
+                <button type="submit" class="btn btn-sm btn-danger">
+                  <i class="bi bi-x"></i> Reddet
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-calendar-x" style="font-size: 3rem"></i>
+      <p class="mt-2">Bugün için randevu bulunmuyor.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
