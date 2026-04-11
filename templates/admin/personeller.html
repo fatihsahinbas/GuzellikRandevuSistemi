@@ -20,10 +20,7 @@
             <th>Toplam Randevu</th>
             <th>Ort. Puan</th>
             <th>Durum</th>
-<<<<<<< HEAD
             <th>İşlem</th>
-=======
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
           </tr>
         </thead>
         <tbody>
@@ -32,7 +29,6 @@
             <td>{{ p['id'] }}</td>
             <td><strong>{{ p['ad_soyad'] }}</strong></td>
             <td>{{ p['email'] }}</td>
-<<<<<<< HEAD
             <td>
               {% for uzmanlik in personel_uzmanliklar.get(p['id'], []) %}
                 <span class="badge bg-secondary me-1">{{ uzmanlik }}</span>
@@ -40,9 +36,6 @@
                 <span class="text-muted">—</span>
               {% endfor %}
             </td>
-=======
-            <td><span class="badge bg-secondary">{{ p['uzmanlik'] }}</span></td>
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
             <td>{{ p['toplam_randevu'] or 0 }}</td>
             <td>
               {% if p['ort_puan'] %}
@@ -54,7 +47,6 @@
               {% endif %}
             </td>
             <td>
-<<<<<<< HEAD
               <span class="badge {{ 'bg-success' if p['aktif'] else 'bg-danger' }}">
                 {{ 'Aktif' if p['aktif'] else 'Pasif' }}
               </span>
@@ -65,21 +57,6 @@
                 <i class="bi bi-pencil"></i>
               </a>
             </td>
-=======
-              <span
-                class="badge {{ 'bg-success' if p['aktif'] else 'bg-danger' }}"
-              >
-                {{ 'Aktif' if p['aktif'] else 'Pasif' }}
-              </span>
-            </td>
-            <a
-              href="{{ url_for('admin.personel_calisma', personel_id=p.id) }}"
-              class="btn btn-outline-primary btn-sm"
-              title="Çalışma Saatleri"
-            >
-              <i class="bi bi-clock"></i>
-            </a>
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
           </tr>
           {% endfor %}
         </tbody>
@@ -87,8 +64,4 @@
     </div>
   </div>
 </div>
-<<<<<<< HEAD
 {% endblock %}
-=======
-{% endblock %}
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1

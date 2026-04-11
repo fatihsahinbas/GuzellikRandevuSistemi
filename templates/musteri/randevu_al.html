@@ -1,13 +1,9 @@
-{% extends 'base.html' %} {% block baslik %}Randevu Al – Güzellik Merkezi{%
-endblock %} {% block icerik %}
+{% extends 'base.html' %} {% block baslik %}Randevu Al – Güzellik Merkezi{% endblock %} {% block icerik %}
 <!--
   templates/musteri/randevu_al.html  –  Randevu Alma Formu
   ==========================================================
   DFD 2.0 – Randevu Talebi Oluştur
   DFD 3.0 – Uygunluk Kontrolü
-
-  DFD Notlarından: "3, 4 ve 5. seçenekler aynı sayfada olsun"
-  → İşlem + Personel + Tarih/Saat hepsi tek formda
 -->
 
 <div class="row justify-content-center">
@@ -20,11 +16,8 @@ endblock %} {% block icerik %}
         </h5>
       </div>
       <div class="card-body p-4">
-        <form
-          method="POST"
-          action="{{ url_for('musteri.randevu_al') }}"
-          id="randevuForm"
-        >
+        <form method="POST" action="{{ url_for('musteri.randevu_al') }}" id="randevuForm">
+
           <!-- ADIM 1: İşlem Seçimi -->
           <div class="mb-4">
             <label class="form-label fw-bold">
@@ -39,8 +32,7 @@ endblock %} {% block icerik %}
               onchange="personelFiltrele()"
             >
               <option value="">-- İşlem Seçiniz --</option>
-              {# Jinja2: Benzersiz işlem türlerini listele #} {% for islem in
-              islemler %}
+              {% for islem in islemler %}
               <option value="{{ islem['ad'] }}">{{ islem['ad'] }}</option>
               {% endfor %}
             </select>
@@ -53,18 +45,10 @@ endblock %} {% block icerik %}
               Personel Seçin
             </label>
             <div class="row g-2" id="personelKartlar">
-              <!--
-                              Personeller kart şeklinde gösterilir.
-                              JavaScript ile seçilen işleme göre filtrelenir.
-                            -->
               {% for personel in personeller %}
               <div
                 class="col-md-6 personel-kart"
-<<<<<<< HEAD
                 data-uzmanlik="{{ personel['uzmanlik'] | tojson }}"
-=======
-                data-uzmanlik="{{ personel['uzmanlik'] }}"
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
               >
                 <div
                   class="card border h-100 personel-secim-karti"
@@ -72,27 +56,19 @@ endblock %} {% block icerik %}
                   style="cursor: pointer"
                 >
                   <div class="card-body text-center p-3">
-                    <i
-                      class="bi bi-person-circle text-danger"
-                      style="font-size: 2rem"
-                    ></i>
+                    <i class="bi bi-person-circle text-danger" style="font-size: 2rem"></i>
                     <h6 class="mt-2 mb-1">{{ personel['ad_soyad'] }}</h6>
-<<<<<<< HEAD
                     <small class="text-muted">{{ personel['uzmanlik_str'] }}</small>
-=======
-                    <small class="text-muted">{{ personel['uzmanlik'] }}</small>
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
                   </div>
                 </div>
               </div>
               {% endfor %}
             </div>
-            <!-- Gizli input: Seçilen personel ID'si buraya yazılır -->
             <input type="hidden" name="personel_id" id="personelId" required />
             <div class="form-text mt-2" id="personelUyari"></div>
           </div>
 
-          <!-- ADIM 3: Tarih ve Saat Seçimi (Aynı sayfada - DFD notu) -->
+          <!-- ADIM 3: Tarih ve Saat Seçimi -->
           <div class="row mb-4">
             <div class="col-md-6">
               <label class="form-label fw-bold">
@@ -109,10 +85,9 @@ endblock %} {% block icerik %}
               <div class="form-text">Bugün veya ilerleyen bir tarih seçin</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-bold"> Saat Seçin </label>
+              <label class="form-label fw-bold">Saat Seçin</label>
               <select class="form-select form-select-lg" name="saat" required>
                 <option value="">-- Saat Seçiniz --</option>
-                <!-- Çalışma saatleri: 09:00 - 18:00, 30'ar dakika aralıkla -->
                 {% for saat in ['09:00','09:30','10:00','10:30','11:00','11:30',
                 '12:00','12:30','13:00','13:30','14:00','14:30',
                 '15:00','15:30','16:00','16:30','17:00','17:30'] %}
@@ -135,83 +110,52 @@ endblock %} {% block icerik %}
             Talebiniz personel tarafından onaylandıktan sonra kesinleşecektir.
             Onay/red durumu panelinizdeki bildirimlerden takip edebilirsiniz.
           </div>
+
         </form>
       </div>
     </div>
   </div>
 </div>
-{% endblock %} {% block ekstra_js %}
+{% endblock %}
+
+{% block ekstra_js %}
 <script>
-  /**
-   * Bugünün tarihini minimum değer olarak ayarla.
-   * Geçmişe randevu alınmasını engeller (frontend tarafı).
-   */
   const bugun = new Date().toISOString().split("T")[0];
   document.getElementById("tarihInput").min = bugun;
 
-  /**
-   * Seçilen işleme göre personel kartlarını filtrele.
-   * İlgili uzmanlığa sahip personeller görünür, diğerleri gizlenir.
-   */
   function personelFiltrele() {
     const seciliIslem = document.getElementById("islemSelect").value;
     const kartlar = document.querySelectorAll(".personel-kart");
 
     kartlar.forEach((kart) => {
-<<<<<<< HEAD
       const uzmanliklar = JSON.parse(kart.dataset.uzmanlik || '[]');
-      // Hiç işlem seçilmemişse hepsini göster, seçildiyse uzmanlık listesinde ara
       if (!seciliIslem || uzmanliklar.includes(seciliIslem)) {
-=======
-      const uzmanlik = kart.dataset.uzmanlik;
-      // Hiç işlem seçilmemişse veya uzmanlık eşleşiyorsa göster
-      if (!seciliIslem || uzmanlik === seciliIslem) {
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
         kart.style.display = "block";
       } else {
         kart.style.display = "none";
       }
     });
 
-    // Önceki personel seçimini temizle
     document.getElementById("personelId").value = "";
     document.querySelectorAll(".personel-secim-karti").forEach((k) => {
-<<<<<<< HEAD
       k.classList.remove("border-danger");
       k.style.backgroundColor = "";
-=======
-      k.classList.remove("border-danger", "bg-danger", "text-white");
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
     });
   }
 
-  /**
-   * Personel kartına tıklandığında seçim yap.
-   * Seçilen kartı kırmızı bordürle vurgular.
-   *
-   * @param {number} personelId - Seçilen personelin ID'si
-   * @param {HTMLElement} element - Tıklanan kart elementi
-   */
   function personelSec(personelId, element) {
-    // Tüm kartları sıfırla
     document.querySelectorAll(".personel-secim-karti").forEach((k) => {
-      k.classList.remove("border-danger", "text-white");
+      k.classList.remove("border-danger");
       k.style.backgroundColor = "";
       k.style.color = "";
     });
 
-    // Seçilen kartı vurgula
     element.classList.add("border-danger");
     element.style.backgroundColor = "#fff5f5";
 
-    // Gizli input'a personel ID'sini yaz
     document.getElementById("personelId").value = personelId;
     document.getElementById("personelUyari").innerHTML =
       '<i class="bi bi-check-circle text-success"></i> Personel seçildi.';
   }
 </script>
-<<<<<<< HEAD
 {% endblock %}
-=======
-{% endblock %}
->>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
