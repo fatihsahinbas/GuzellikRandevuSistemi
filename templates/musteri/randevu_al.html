@@ -60,7 +60,11 @@ endblock %} {% block icerik %}
               {% for personel in personeller %}
               <div
                 class="col-md-6 personel-kart"
+<<<<<<< HEAD
                 data-uzmanlik="{{ personel['uzmanlik'] | tojson }}"
+=======
+                data-uzmanlik="{{ personel['uzmanlik'] }}"
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
               >
                 <div
                   class="card border h-100 personel-secim-karti"
@@ -73,7 +77,11 @@ endblock %} {% block icerik %}
                       style="font-size: 2rem"
                     ></i>
                     <h6 class="mt-2 mb-1">{{ personel['ad_soyad'] }}</h6>
+<<<<<<< HEAD
                     <small class="text-muted">{{ personel['uzmanlik_str'] }}</small>
+=======
+                    <small class="text-muted">{{ personel['uzmanlik'] }}</small>
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
                   </div>
                 </div>
               </div>
@@ -150,9 +158,15 @@ endblock %} {% block icerik %}
     const kartlar = document.querySelectorAll(".personel-kart");
 
     kartlar.forEach((kart) => {
+<<<<<<< HEAD
       const uzmanliklar = JSON.parse(kart.dataset.uzmanlik || '[]');
       // Hiç işlem seçilmemişse hepsini göster, seçildiyse uzmanlık listesinde ara
       if (!seciliIslem || uzmanliklar.includes(seciliIslem)) {
+=======
+      const uzmanlik = kart.dataset.uzmanlik;
+      // Hiç işlem seçilmemişse veya uzmanlık eşleşiyorsa göster
+      if (!seciliIslem || uzmanlik === seciliIslem) {
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
         kart.style.display = "block";
       } else {
         kart.style.display = "none";
@@ -162,8 +176,12 @@ endblock %} {% block icerik %}
     // Önceki personel seçimini temizle
     document.getElementById("personelId").value = "";
     document.querySelectorAll(".personel-secim-karti").forEach((k) => {
+<<<<<<< HEAD
       k.classList.remove("border-danger");
       k.style.backgroundColor = "";
+=======
+      k.classList.remove("border-danger", "bg-danger", "text-white");
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
     });
   }
 
@@ -192,4 +210,8 @@ endblock %} {% block icerik %}
       '<i class="bi bi-check-circle text-success"></i> Personel seçildi.';
   }
 </script>
+<<<<<<< HEAD
 {% endblock %}
+=======
+{% endblock %}
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1

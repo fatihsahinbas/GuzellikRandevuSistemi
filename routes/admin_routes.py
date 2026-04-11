@@ -170,6 +170,7 @@ def personeller():
         ORDER BY ort_puan DESC NULLS LAST
     ''').fetchall()
 
+<<<<<<< HEAD
     # Her personel için uzmanlık isimlerini ayrıca çek
     personel_uzmanliklar = {}
     for p in personel_listesi:
@@ -184,6 +185,9 @@ def personeller():
     return render_template('admin/personeller.html',
                            personeller=personel_listesi,
                            personel_uzmanliklar=personel_uzmanliklar)
+=======
+    return render_template('admin/personeller.html', personeller=personel_listesi)
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
 
 
 @admin_bp.route('/personel-ekle', methods=['GET', 'POST'])
@@ -249,6 +253,7 @@ def personel_ekle():
 
     return render_template('admin/personel_ekle.html', hizmetler=hizmetler)
 
+<<<<<<< HEAD
 
 @admin_bp.route('/personel-duzenle/<int:personel_id>', methods=['GET', 'POST'])
 @admin_gerekli
@@ -378,6 +383,9 @@ def personel_duzenle(personel_id):
                            mevcut_uzmanliklar=mevcut_uzmanliklar,
                            gunler=GUNLER, mevcut_saatler=mevcut_saatler)
 
+=======
+@admin_bp.route('/personel-calisma/<int:personel_id>', methods=['GET', 'POST'])
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
 @admin_gerekli
 def personel_calisma(personel_id):
     """
@@ -712,4 +720,9 @@ def hizmet_aktif(hizmet_id):
     db.execute('UPDATE hizmetler SET aktif = 1 WHERE id = ?', (hizmet_id,))
     db.commit()
     flash('Hizmet aktifleştirildi.', 'success')
+<<<<<<< HEAD
     return redirect(url_for('admin.hizmetler'))
+=======
+    return redirect(url_for('admin.hizmetler'))
+
+>>>>>>> cba97dee2e250d3553d98cbaeef0ffe1ea1868e1
